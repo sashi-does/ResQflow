@@ -1,0 +1,567 @@
+{
+ "id": "assam",
+ "name": "Assam Floods, Day 1",
+ "start_clock": "06:00",
+ "duration_h": 24,
+ "constants": {
+  "per_capita_daily": {
+   "food_rations": 1.0,
+   "water_l": 3.0,
+   "medical_kits": 0.01
+  },
+  "unit_weight_kg": {
+   "food_rations": 0.6,
+   "water_l": 1.0,
+   "medical_kits": 2.0
+  },
+  "truck_capacity_kg": 8000,
+  "speed_kmh": {
+   "nh": 40,
+   "sh": 30,
+   "local": 25
+  },
+  "ferry_crossing_min": 90,
+  "load_min": 15,
+  "unload_min": 15,
+  "road_winding_factor": 1.3,
+  "safety_ratio": 0.2,
+  "step_s": 30,
+  "auto_approve_after_min": 20,
+  "replan_every_min": 60,
+  "debounce_min": 5
+ },
+ "nodes": [
+  {
+   "id": "GHY",
+   "name": "Guwahati",
+   "lat": 26.1445,
+   "lon": 91.7362,
+   "kind": "town"
+  },
+  {
+   "id": "NLB",
+   "name": "Nalbari",
+   "lat": 26.4448,
+   "lon": 91.4405,
+   "kind": "town"
+  },
+  {
+   "id": "BPT",
+   "name": "Barpeta",
+   "lat": 26.323,
+   "lon": 91.006,
+   "kind": "town"
+  },
+  {
+   "id": "JGR",
+   "name": "Jagiroad",
+   "lat": 26.116,
+   "lon": 92.199,
+   "kind": "junction"
+  },
+  {
+   "id": "MRG",
+   "name": "Morigaon",
+   "lat": 26.252,
+   "lon": 92.342,
+   "kind": "town"
+  },
+  {
+   "id": "NGN",
+   "name": "Nagaon",
+   "lat": 26.348,
+   "lon": 92.6838,
+   "kind": "town"
+  },
+  {
+   "id": "KLB",
+   "name": "Kaliabor Tiniali",
+   "lat": 26.585,
+   "lon": 92.99,
+   "kind": "junction"
+  },
+  {
+   "id": "TZP",
+   "name": "Tezpur",
+   "lat": 26.6338,
+   "lon": 92.8,
+   "kind": "town"
+  },
+  {
+   "id": "BSK",
+   "name": "Biswanath Chariali",
+   "lat": 26.729,
+   "lon": 93.151,
+   "kind": "town"
+  },
+  {
+   "id": "GHP",
+   "name": "Gohpur",
+   "lat": 26.883,
+   "lon": 93.617,
+   "kind": "town"
+  },
+  {
+   "id": "NLK",
+   "name": "North Lakhimpur",
+   "lat": 27.236,
+   "lon": 94.1027,
+   "kind": "town"
+  },
+  {
+   "id": "DMJ",
+   "name": "Dhemaji",
+   "lat": 27.4833,
+   "lon": 94.5833,
+   "kind": "town"
+  },
+  {
+   "id": "BKT",
+   "name": "Bokakhat (Kaziranga)",
+   "lat": 26.64,
+   "lon": 93.604,
+   "kind": "town"
+  },
+  {
+   "id": "NMG",
+   "name": "Numaligarh",
+   "lat": 26.62,
+   "lon": 93.72,
+   "kind": "junction"
+  },
+  {
+   "id": "JRH",
+   "name": "Jorhat",
+   "lat": 26.7509,
+   "lon": 94.2037,
+   "kind": "town"
+  },
+  {
+   "id": "NMT",
+   "name": "Nimati Ghat",
+   "lat": 26.86,
+   "lon": 94.24,
+   "kind": "ghat"
+  },
+  {
+   "id": "MJL",
+   "name": "Majuli (Garamur)",
+   "lat": 26.95,
+   "lon": 94.17,
+   "kind": "town"
+  },
+  {
+   "id": "DBK",
+   "name": "Dabaka",
+   "lat": 26.105,
+   "lon": 92.856,
+   "kind": "junction"
+  },
+  {
+   "id": "BKJ",
+   "name": "Bokajan",
+   "lat": 26.02,
+   "lon": 93.77,
+   "kind": "junction"
+  },
+  {
+   "id": "GLP",
+   "name": "Goalpara",
+   "lat": 26.176,
+   "lon": 90.626,
+   "kind": "town"
+  }
+ ],
+ "edges": [
+  {
+   "id": "E1",
+   "a": "GHY",
+   "b": "NLB",
+   "road": "NH-27",
+   "kind": "nh"
+  },
+  {
+   "id": "E2",
+   "a": "NLB",
+   "b": "BPT",
+   "road": "NH-27",
+   "kind": "nh"
+  },
+  {
+   "id": "E3",
+   "a": "GHY",
+   "b": "GLP",
+   "road": "NH-17",
+   "kind": "nh"
+  },
+  {
+   "id": "E4",
+   "a": "GHY",
+   "b": "JGR",
+   "road": "NH-27",
+   "kind": "nh"
+  },
+  {
+   "id": "E5",
+   "a": "JGR",
+   "b": "MRG",
+   "road": "SH Jagiroad–Morigaon",
+   "kind": "sh"
+  },
+  {
+   "id": "E6",
+   "a": "MRG",
+   "b": "NGN",
+   "road": "SH Morigaon–Nagaon",
+   "kind": "sh"
+  },
+  {
+   "id": "E7",
+   "a": "JGR",
+   "b": "NGN",
+   "road": "NH-27",
+   "kind": "nh"
+  },
+  {
+   "id": "E8",
+   "a": "NGN",
+   "b": "KLB",
+   "road": "NH-27",
+   "kind": "nh"
+  },
+  {
+   "id": "E9",
+   "a": "KLB",
+   "b": "TZP",
+   "road": "NH-15 (Kalia Bhomora bridge)",
+   "kind": "nh"
+  },
+  {
+   "id": "E10",
+   "a": "KLB",
+   "b": "BKT",
+   "road": "NH-715 (Kaziranga stretch)",
+   "kind": "nh"
+  },
+  {
+   "id": "E11",
+   "a": "BKT",
+   "b": "NMG",
+   "road": "NH-715",
+   "kind": "nh"
+  },
+  {
+   "id": "E12",
+   "a": "NMG",
+   "b": "JRH",
+   "road": "NH-715",
+   "kind": "nh"
+  },
+  {
+   "id": "E13",
+   "a": "TZP",
+   "b": "BSK",
+   "road": "NH-15",
+   "kind": "nh"
+  },
+  {
+   "id": "E14",
+   "a": "BSK",
+   "b": "GHP",
+   "road": "NH-15",
+   "kind": "nh"
+  },
+  {
+   "id": "E15",
+   "a": "GHP",
+   "b": "NLK",
+   "road": "NH-15",
+   "kind": "nh"
+  },
+  {
+   "id": "E16",
+   "a": "NLK",
+   "b": "DMJ",
+   "road": "NH-15",
+   "kind": "nh"
+  },
+  {
+   "id": "E17",
+   "a": "JRH",
+   "b": "NMT",
+   "road": "Jorhat–Nimati road",
+   "kind": "local"
+  },
+  {
+   "id": "E18",
+   "a": "NMT",
+   "b": "MJL",
+   "road": "Majuli ferry",
+   "kind": "ferry"
+  },
+  {
+   "id": "E19",
+   "a": "NGN",
+   "b": "DBK",
+   "road": "NH-27 / NH-29",
+   "kind": "nh"
+  },
+  {
+   "id": "E20",
+   "a": "DBK",
+   "b": "BKJ",
+   "road": "NH-29 / NH-129 (via Dimapur)",
+   "kind": "nh"
+  },
+  {
+   "id": "E21",
+   "a": "BKJ",
+   "b": "NMG",
+   "road": "NH-129",
+   "kind": "nh"
+  },
+  {
+   "id": "E22",
+   "a": "NLK",
+   "b": "MJL",
+   "road": "Lakhimpur–Majuli (north bank road)",
+   "kind": "local"
+  }
+ ],
+ "warehouses": [
+  {
+   "id": "W1",
+   "node_id": "GHY",
+   "name": "Guwahati State Hub",
+   "stock": {
+    "food_rations": 40000,
+    "water_l": 150000,
+    "medical_kits": 1500
+   }
+  },
+  {
+   "id": "W2",
+   "node_id": "NGN",
+   "name": "Nagaon",
+   "stock": {
+    "food_rations": 15000,
+    "water_l": 45000,
+    "medical_kits": 400
+   }
+  },
+  {
+   "id": "W3",
+   "node_id": "TZP",
+   "name": "Tezpur",
+   "stock": {
+    "food_rations": 12000,
+    "water_l": 40000,
+    "medical_kits": 350
+   }
+  },
+  {
+   "id": "W4",
+   "node_id": "JRH",
+   "name": "Jorhat",
+   "stock": {
+    "food_rations": 14000,
+    "water_l": 45000,
+    "medical_kits": 400
+   }
+  },
+  {
+   "id": "W5",
+   "node_id": "NLK",
+   "name": "North Lakhimpur",
+   "stock": {
+    "food_rations": 9000,
+    "water_l": 30000,
+    "medical_kits": 250
+   }
+  }
+ ],
+ "camps": [
+  {
+   "id": "C1",
+   "node_id": "BPT",
+   "name": "Barpeta Relief Camp",
+   "district": "Barpeta",
+   "population": 4400,
+   "stock": {
+    "food_rations": 6600,
+    "water_l": 18000,
+    "medical_kits": 60
+   }
+  },
+  {
+   "id": "C2",
+   "node_id": "MRG",
+   "name": "Morigaon Relief Camp",
+   "district": "Morigaon",
+   "population": 5200,
+   "stock": {
+    "food_rations": 4000,
+    "water_l": 8000,
+    "medical_kits": 30
+   }
+  },
+  {
+   "id": "C3",
+   "node_id": "BSK",
+   "name": "Biswanath Relief Camp",
+   "district": "Biswanath",
+   "population": 3000,
+   "stock": {
+    "food_rations": 5200,
+    "water_l": 13000,
+    "medical_kits": 40
+   }
+  },
+  {
+   "id": "C4",
+   "node_id": "GHP",
+   "name": "Gohpur Relief Camp",
+   "district": "Biswanath",
+   "population": 2400,
+   "stock": {
+    "food_rations": 3000,
+    "water_l": 6000,
+    "medical_kits": 24
+   }
+  },
+  {
+   "id": "C5",
+   "node_id": "DMJ",
+   "name": "Dhemaji Relief Camp",
+   "district": "Dhemaji",
+   "population": 6000,
+   "stock": {
+    "food_rations": 5000,
+    "water_l": 12000,
+    "medical_kits": 40
+   }
+  },
+  {
+   "id": "C6",
+   "node_id": "BKT",
+   "name": "Bokakhat Relief Camp",
+   "district": "Golaghat",
+   "population": 3600,
+   "stock": {
+    "food_rations": 3600,
+    "water_l": 9000,
+    "medical_kits": 30
+   }
+  },
+  {
+   "id": "C7",
+   "node_id": "MJL",
+   "name": "Majuli Relief Camp",
+   "district": "Majuli",
+   "population": 4800,
+   "stock": {
+    "food_rations": 4800,
+    "water_l": 10000,
+    "medical_kits": 36
+   }
+  },
+  {
+   "id": "C8",
+   "node_id": "GLP",
+   "name": "Goalpara Relief Camp",
+   "district": "Goalpara",
+   "population": 3200,
+   "stock": {
+    "food_rations": 5200,
+    "water_l": 14000,
+    "medical_kits": 40
+   }
+  }
+ ],
+ "trucks": [
+  {
+   "id": "T1",
+   "home_warehouse": "W1"
+  },
+  {
+   "id": "T2",
+   "home_warehouse": "W1"
+  },
+  {
+   "id": "T3",
+   "home_warehouse": "W2"
+  },
+  {
+   "id": "T4",
+   "home_warehouse": "W3"
+  },
+  {
+   "id": "T5",
+   "home_warehouse": "W4"
+  },
+  {
+   "id": "T6",
+   "home_warehouse": "W5"
+  }
+ ],
+ "district_centroids": {
+  "Barpeta": [
+   26.32,
+   91.0
+  ],
+  "Morigaon": [
+   26.25,
+   92.34
+  ],
+  "Biswanath": [
+   26.73,
+   93.15
+  ],
+  "Dhemaji": [
+   27.48,
+   94.58
+  ],
+  "Golaghat": [
+   26.52,
+   93.96
+  ],
+  "Majuli": [
+   26.95,
+   94.17
+  ],
+  "Goalpara": [
+   26.17,
+   90.63
+  ]
+ },
+ "timeline": [
+  {
+   "at": "D1 08:30",
+   "action": "hazard_add",
+   "preset_id": "F1"
+  },
+  {
+   "at": "D1 11:00",
+   "action": "hazard_add",
+   "preset_id": "F3"
+  },
+  {
+   "at": "D1 13:00",
+   "action": "weather_check"
+  },
+  {
+   "at": "D1 15:30",
+   "action": "hazard_add",
+   "preset_id": "F2"
+  },
+  {
+   "at": "D1 20:00",
+   "action": "hazard_remove",
+   "preset_id": "F1"
+  },
+  {
+   "at": "D2 06:00",
+   "action": "end"
+  }
+ ]
+}

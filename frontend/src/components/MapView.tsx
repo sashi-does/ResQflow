@@ -1,4 +1,11 @@
-import { MapContainer, TileLayer } from 'react-leaflet'
+import { useEffect, useMemo } from 'react'
+import { MapContainer, TileLayer, useMap } from 'react-leaflet'
+import { useStore } from '../store'
+import type { Node } from '../types'
+import { CampsLayer } from './map/CampsLayer'
+import { NodesLayer } from './map/NodesLayer'
+import { RoadsLayer } from './map/RoadsLayer'
+import { WarehousesLayer } from './map/WarehousesLayer'
 
 const ASSAM_CENTER: [number, number] = [26.4, 92.9]
 
@@ -6,11 +13,34 @@ const ASSAM_CENTER: [number, number] = [26.4, 92.9]
 const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas'
 const ATTRIBUTION = 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors'
 
+function FitToNodes({ nodes }: { nodes: Node[] }) {
+  const map = useMap()
+  useEffect(() => {
+    if (nodes.length === 0) return
+    map.fitBounds(
+      nodes.map((n) => [n.lat, n.lon] as [number, number]),
+      { padding: [30, 30] },
+    )
+  }, [map, nodes])
+  return null
+}
+
 export function MapView() {
+  const scenario = useStore((s) => s.scenario)
+  const nodeById = useMemo(() => new Map((scenario?.nodes ?? []).map((n) => [n.id, n])), [scenario])
+
   return (
     <MapContainer center={ASSAM_CENTER} zoom={7} className="h-full w-full" preferCanvas>
       <TileLayer url={`${ESRI}/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}`} attribution={ATTRIBUTION} maxZoom={16} />
-      <TileLayer url={`${ESRI}/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}`} maxZoom={16} />
+      {scenario && (
+        <>
+          <FitToNodes nodes={scenario.nodes} />
+          <RoadsLayer edges={scenario.edges} />
+          <NodesLayer nodes={scenario.nodes} />
+          <CampsLayer camps={scenario.camps} nodes={nodeById} />
+          <WarehousesLayer warehouses={scenario.warehouses} nodes={nodeById} />
+        </>
+      )}
     </MapContainer>
   )
 }

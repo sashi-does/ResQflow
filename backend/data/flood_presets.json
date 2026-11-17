@@ -1,0 +1,39 @@
+[
+ {
+  "id": "F1",
+  "label": "NH-715 Kaziranga inundation",
+  "kind": "flood",
+  "target_edges": [
+   "E10"
+  ],
+  "buffer_km": 7,
+  "severity": "high"
+ },
+ {
+  "id": "F2",
+  "label": "Morigaon low-lying flood",
+  "kind": "flood",
+  "center_node": "MRG",
+  "radius_km": 4.5,
+  "severity": "high"
+ },
+ {
+  "id": "F3",
+  "label": "Majuli ferry suspended (high Brahmaputra)",
+  "kind": "edge_closure",
+  "edge_ids": [
+   "E18"
+  ],
+  "severity": "medium"
+ },
+ {
+  "id": "F4",
+  "label": "Subansiri surge on NH-15 near Gohpur",
+  "kind": "flood",
+  "target_edges": [
+   "E15"
+  ],
+  "buffer_km": 6,
+  "severity": "high"
+ }
+]

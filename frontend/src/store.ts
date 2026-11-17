@@ -64,6 +64,8 @@ interface State {
   agentFilter: AgentName[]
   toasts: Toast[]
   error: string | null
+  drawing: boolean
+  drawPoints: LatLon[]
 
   setScenario: (s: Scenario) => void
   setHealth: (h: Health | null) => void
@@ -74,6 +76,8 @@ interface State {
   select: (refs: (Partial<LogRefs> & { entryId?: number }) | null) => void
   toast: (text: string, tone?: Toast['tone']) => void
   dismissToast: (id: number) => void
+  setDrawing: (on: boolean) => void
+  addDrawPoint: (p: LatLon) => void
   applySnapshot: (s: Snapshot) => void
   applyMessage: (m: WsMessage) => void
 }
@@ -107,6 +111,8 @@ export const useStore = create<State>((set, get) => ({
   agentFilter: [],
   toasts: [],
   error: null,
+  drawing: false,
+  drawPoints: [],
 
   setScenario: (scenario) => set({ scenario }),
   setHealth: (health) => set({ health }),
@@ -124,6 +130,8 @@ export const useStore = create<State>((set, get) => ({
     setTimeout(() => get().dismissToast(id), 4000)
   },
   dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
+  setDrawing: (drawing) => set({ drawing, drawPoints: [] }),
+  addDrawPoint: (p) => set((s) => ({ drawPoints: [...s.drawPoints, p] })),
 
   applySnapshot: (snap) =>
     set({

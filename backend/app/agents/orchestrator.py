@@ -42,6 +42,8 @@ class Orchestrator:
         self.last_result: PlanResult | None = None
         self._free_trucks: set[str] = set()
         self.ended = False
+        self.sitrep_every_s = 3 * 3600
+        self._last_sitrep = 0
 
     # ------------------------------------------------------------ Policy
     def on_step(self, world: WorldState, events: list[TimelineEvent]) -> None:
@@ -54,6 +56,9 @@ class Orchestrator:
             self.request("a truck became free while camps still need supplies")
         self._free_trucks = free
         self.dispatcher.auto_approve(world)
+        if world.sim_seconds - self._last_sitrep >= self.sitrep_every_s:
+            self._last_sitrep = world.sim_seconds
+            self.sitrep(world)
         if self.last_cycle_at is None:
             self.request("scenario start")
         elif world.sim_seconds - self.last_cycle_at >= self.replan_every_s:
@@ -129,6 +134,33 @@ class Orchestrator:
         )
         self.last_result = result
         return result
+
+    def sitrep(self, world: WorldState) -> None:
+        """Situation report every 3 sim-hours (template text in offline mode)."""
+        floods = [h for h in world.hazards.values() if h.kind != "rain_advisory"]
+        roads = sorted({world.graph.edges[e].road.split(" (")[0] for h in floods for e in h.edge_ids})
+        levels = {c.id: self.inventory.level(c.id) for c in world.camps.values()}
+        crit = [c.name.replace(" Relief Camp", "") for c in world.camps.values() if levels[c.id] == "critical"]
+        cut = [c.name.replace(" Relief Camp", "") for c in world.camps.values() if c.cut_off]
+        moving = sum(1 for t in world.trucks.values() if t.status in ("en_route", "returning", "loading"))
+        waiting = sum(1 for o in world.orders.values() if o.status == "awaiting_approval")
+        k = world.kpi.snapshot()
+
+        def names(xs: list[str]) -> str:
+            return ", ".join(xs) if xs else "none"
+
+        world.bus.log(
+            "coordinator",
+            "sitrep",
+            f"Situation report, {world.sim_time}: {len(roads)} road{'s' if len(roads) != 1 else ''} closed"
+            + (f" ({', '.join(roads)})" if roads else "")
+            + f". Critical camps: {names(crit)}. Cut off: {names(cut)}. {k.deliveries_total} deliveries so far, "
+            f"{moving} of {len(world.trucks)} trucks working, "
+            f"{waiting} order{'s' if waiting != 1 else ''} awaiting approval.",
+            f"People-hours without water so far: {k.people_hours_without_water:,.0f}. "
+            f"Supplies delivered: {k.supplies_delivered_kg / 1000:.1f} t. "
+            f"On-time: {k.deliveries_on_time_pct:.0f}%. Truck-hours stuck: {k.truck_hours_stuck:.1f}.",
+        )
 
     def _unmet_demand(self, world: WorldState) -> bool:
         return any(

@@ -38,6 +38,11 @@ export const api = {
   speed: (multiplier: number) => req<{ speed: number }>('POST', '/sim/speed', { multiplier }),
   runDemo: () => req<{ running: boolean; sim: SimView }>('POST', '/demo/run'),
   trigger: (preset_id: string) => req<Hazard>('POST', '/hazards/trigger', { preset_id }),
+  customFlood: (label: string, ring: [number, number][]) =>
+    req<Hazard>('POST', '/hazards/custom', {
+      label,
+      polygon: { type: 'Polygon', coordinates: [[...ring.map(([lat, lon]) => [lon, lat]), [ring[0][1], ring[0][0]]]] },
+    }),
   recedeAll: () => req<{ removed: boolean; hazard_ids: string[] }>('DELETE', '/hazards/all'),
   removeHazard: (id: string) => req<{ removed: boolean }>('DELETE', `/hazards/${id}`),
   replan: () => req<{ started: boolean }>('POST', '/replan'),

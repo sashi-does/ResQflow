@@ -8,6 +8,23 @@ export function DemoControls() {
   const connected = useStore((s) => s.connected)
   const active = new Set(hazards.map((h) => h.preset_id))
   const floods = hazards.filter((h) => h.kind !== 'rain_advisory').length
+  const drawing = useStore((s) => s.drawing)
+  const drawPoints = useStore((s) => s.drawPoints)
+  const setDrawing = useStore((s) => s.setDrawing)
+
+  const finishDrawing = () =>
+    api
+      .customFlood('Reported flooding (drawn on map)', drawPoints)
+      .then((h) =>
+        toast(
+          h.edge_ids.length
+            ? `Flood added: ${h.edge_ids.length} road segment${h.edge_ids.length > 1 ? 's' : ''} closed`
+            : 'Flood added: it does not cross any road',
+          'warn',
+        ),
+      )
+      .catch((e: unknown) => toast(String(e), 'error'))
+      .finally(() => setDrawing(false))
 
   const trigger = (id: string, label: string) =>
     api
@@ -51,6 +68,22 @@ export function DemoControls() {
         >
           Replan
         </button>
+        <span className="mx-1 h-4 w-px bg-slate-700" />
+        {drawing ? (
+          <>
+            <span className="px-1 text-xs text-sky-300">Click the map to outline the flood…</span>
+            <button className="btn-chip" disabled={drawPoints.length < 3} onClick={finishDrawing}>
+              Finish ({drawPoints.length})
+            </button>
+            <button className="btn-chip" onClick={() => setDrawing(false)}>
+              Cancel
+            </button>
+          </>
+        ) : (
+          <button className="btn-chip" disabled={!connected} onClick={() => setDrawing(true)}>
+            Draw flood
+          </button>
+        )}
       </div>
     </div>
   )

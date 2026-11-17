@@ -49,16 +49,19 @@ export function KpiStrip() {
       {SPECS.map((spec) => {
         const a = kpis?.agentic[spec.key] ?? 0
         const b = kpis?.baseline[spec.key] ?? 0
+        const onTime = spec.key === 'deliveries_on_time_pct'
+        const fmtA = onTime && !kpis?.agentic.deliveries_total ? () => '—' : spec.fmt
+        const fmtB = onTime && !kpis?.baseline.deliveries_total ? () => '—' : spec.fmt
         return (
           <div key={spec.key} className="flex min-w-0 flex-1 flex-col justify-center border-r border-slate-800/60 px-4">
             <span className="truncate text-[11px] uppercase tracking-wider text-slate-400">{spec.label}</span>
             <div className="mt-0.5 flex items-baseline gap-2">
               <span className="text-xl font-semibold tabular-nums text-white" data-testid={`kpi-${spec.key}`}>
-                {spec.fmt(a)}
+                {fmtA(a)}
               </span>
               <Delta spec={spec} a={a} b={b} />
             </div>
-            <span className="text-[11px] tabular-nums text-slate-500">Static {spec.fmt(b)}</span>
+            <span className="text-[11px] tabular-nums text-slate-500">Static {fmtB(b)}</span>
           </div>
         )
       })}

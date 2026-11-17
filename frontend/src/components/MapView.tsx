@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, useMap } from 'react-leaflet'
 import { useStore } from '../store'
 import type { Node } from '../types'
 import { CampsLayer } from './map/CampsLayer'
+import { DrawLayer } from './map/DrawLayer'
 import { HazardsLayer } from './map/HazardsLayer'
 import { NodesLayer } from './map/NodesLayer'
 import { RoadsLayer } from './map/RoadsLayer'
@@ -23,7 +24,7 @@ function FitToNodes({ nodes }: { nodes: Node[] }) {
     if (nodes.length === 0) return
     map.fitBounds(
       nodes.map((n) => [n.lat, n.lon] as [number, number]),
-      { paddingTopLeft: [20, 40], paddingBottomRight: [20, 90] },
+      { paddingTopLeft: [20, 40], paddingBottomRight: [80, 90] },
     )
   }, [map, nodes])
   return null
@@ -54,6 +55,7 @@ export function MapView() {
           <WarehousesLayer warehouses={scenario.warehouses} nodes={nodeById} />
           <RouteFlash />
           <TrucksLayer />
+          <DrawLayer />
         </>
       )}
     </MapContainer>

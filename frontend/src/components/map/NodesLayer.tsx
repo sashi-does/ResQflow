@@ -5,6 +5,7 @@ import type { Node } from '../../types'
 // nudge labels that would collide with neighbours or flood labels
 const LABEL_DIR: Record<string, 'right' | 'left' | 'bottom' | 'top'> = {
   NMG: 'bottom',
+  BSK: 'top',
   KLB: 'bottom',
   BKT: 'top',
   NMT: 'right',

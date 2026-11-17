@@ -19,31 +19,38 @@ def _cache() -> dict[str, Any]:
     return json.loads((DATA_DIR / "weather_cache.json").read_text())
 
 
-def rain_24h(centroids: dict[str, list[float]], mode: str = "cache", timeout_s: float = 5.0) -> dict[str, float]:
+def _fetch_live(centroids: dict[str, list[float]], timeout_s: float) -> dict[str, list[float]]:
+    """One batched Open-Meteo request for every district (comma-separated coordinates)."""
+    names = list(centroids)
+    r = httpx.get(
+        OPEN_METEO,
+        params={
+            "latitude": ",".join(str(centroids[n][0]) for n in names),
+            "longitude": ",".join(str(centroids[n][1]) for n in names),
+            "hourly": "precipitation",
+            "forecast_days": 2,
+            "timezone": "Asia/Kolkata",
+        },
+        timeout=timeout_s,
+    )
+    r.raise_for_status()
+    body = r.json()
+    rows = body if isinstance(body, list) else [body]
+    return {n: row["hourly"]["precipitation"] for n, row in zip(names, rows, strict=True)}
+
+
+def rain_24h(centroids: dict[str, list[float]], mode: str = "cache", timeout_s: float = 3.0) -> dict[str, float]:
     """Next-24h precipitation sum (mm) per district. Live mode falls back to the cache on any error."""
+    hourly: dict[str, list[float]] = {}
+    if mode == "live":
+        try:
+            hourly = _fetch_live(centroids, timeout_s)
+        except Exception as exc:  # network down, rate limit, schema change
+            log.warning("Open-Meteo failed (%s); using the cached forecast", exc)
     cache = _cache()["districts"]
     out: dict[str, float] = {}
-    for district, (lat, lon) in centroids.items():
-        hourly: list[float] | None = None
-        if mode == "live":
-            try:
-                r = httpx.get(
-                    OPEN_METEO,
-                    params={
-                        "latitude": lat,
-                        "longitude": lon,
-                        "hourly": "precipitation",
-                        "forecast_days": 2,
-                        "timezone": "Asia/Kolkata",
-                    },
-                    timeout=timeout_s,
-                )
-                r.raise_for_status()
-                hourly = r.json()["hourly"]["precipitation"]
-            except Exception as exc:  # network down, rate limit, schema change
-                log.warning("Open-Meteo failed for %s (%s); using cache", district, exc)
-        if hourly is None and district in cache:
-            hourly = cache[district]["hourly"]["precipitation"]
-        if hourly is not None:
-            out[district] = round(sum(v or 0.0 for v in hourly[:24]), 1)
+    for district in centroids:
+        series = hourly.get(district) or (cache[district]["hourly"]["precipitation"] if district in cache else None)
+        if series is not None:
+            out[district] = round(sum(v or 0.0 for v in series[:24]), 1)
     return out

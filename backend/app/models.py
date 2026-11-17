@@ -119,6 +119,9 @@ class Truck(BaseModel):
     destination_node: str | None = None
     timer_s: float = 0.0  # remaining loading/unloading time
     eta_sim_seconds: int | None = None
+    leg: Literal["reposition", "delivery", "return"] | None = None
+    turned_back: bool = False  # retreating along an edge that flooded under it
+    stuck: bool = False  # waiting at/on a blocked edge this step
 
 
 class Hazard(BaseModel):

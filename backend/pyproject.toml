@@ -14,7 +14,11 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pytest>=8.2", "ruff>=0.6"]
+dev = [
+    "pytest>=8.2",
+    "pytest-timeout>=2.4.0",
+    "ruff>=0.6",
+]
 
 [tool.uv]
 package = false
@@ -22,6 +26,7 @@ package = false
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+timeout = 60
 filterwarnings = ["ignore::DeprecationWarning:starlette.*", "ignore:Using `httpx`"]
 
 [tool.ruff]

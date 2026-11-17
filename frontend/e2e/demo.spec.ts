@@ -73,15 +73,32 @@ test('demo run: trucks move, flood + re-route flash, approval, KPIs, zero consol
   await expect(page.locator('table tbody tr')).toHaveCount(8)
   await page.screenshot({ path: `${SHOTS}/05-camps-tab.png` })
 
-  // 5. KPI strip after most of the day (advance quickly via the dev endpoint, then let the UI catch up)
+  // 5. Rest of the day with a District Officer who approves pending orders every 20 sim-min
+  //    (same REST call as the Approve button), then the KPI strip at D2 06:00.
   if (!process.env.SKIP_KPI) {
-  await page.request.post('http://localhost:8010/api/sim/advance', { data: { minutes: 600 } })
-  await page.getByRole('button', { name: 'play' }).click()
-  await page.waitForTimeout(2500)
-  await page.getByTestId('tab-feed').click()
-  await expect(page.getByTestId('kpi-strip')).toBeVisible()
-  await page.screenshot({ path: `${SHOTS}/04-kpi-strip.png` })
-  await page.getByRole('button', { name: 'pause' }).click()
+    await page.getByTestId('tab-feed').click()
+    const api = 'http://localhost:8010/api'
+    for (let i = 0; i < 70; i++) {
+      const pending = (await (await page.request.get(`${api}/orders?status=awaiting_approval`)).json()) as { id: string }[]
+      for (const o of pending) {
+        await page.request.post(`${api}/approvals/${o.id}`, { data: { decision: 'approve' } })
+      }
+      const sim = (await (await page.request.post(`${api}/sim/advance`, { data: { minutes: 20 } })).json()) as {
+        ended: boolean
+      }
+      if (sim.ended) break
+    }
+    await expect(page.getByTestId('sim-time')).toHaveText('D2 06:00', { timeout: 10_000 })
+    await page.waitForTimeout(7000) // let the 07:15 flash and toasts expire (6.5 s / 4 s)
+    await expect(page.locator('.flash-new')).toHaveCount(0)
+    await expect(page.getByTestId('kpi-strip')).toBeVisible()
+    await page.screenshot({ path: `${SHOTS}/04-kpi-strip.png` })
+    const k = (await (await page.request.get(`${api}/kpis`)).json()) as {
+      agentic: { people_hours_without_water: number }
+      baseline: { people_hours_without_water: number }
+    }
+    console.log('LIVE KPIs (officer approves every 20 min):', JSON.stringify(k))
+    expect(k.agentic.people_hours_without_water).toBeLessThanOrEqual(0.7 * k.baseline.people_hours_without_water)
   }
 
   expect(errors, errors.join('\n')).toEqual([])

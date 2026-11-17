@@ -2,10 +2,12 @@ import { useEffect } from 'react'
 import { api } from './api'
 import { ConnectionBanner } from './components/ConnectionBanner'
 import { DemoControls } from './components/DemoControls'
+import { KpiStrip } from './components/KpiStrip'
 import { MapView } from './components/MapView'
 import { RightPanel } from './components/RightPanel'
 import { Toasts } from './components/Toasts'
 import { TopBar } from './components/TopBar'
+import { useKeyboardShortcuts } from './hooks'
 import { useStore } from './store'
 import { useLiveSocket } from './ws'
 
@@ -17,6 +19,7 @@ export default function App() {
   const error = useStore((s) => s.error)
 
   useLiveSocket()
+  useKeyboardShortcuts()
 
   useEffect(() => {
     api.health().then(setHealth).catch(() => setHealth(null))
@@ -42,6 +45,7 @@ export default function App() {
         </main>
         <RightPanel />
       </div>
+      <KpiStrip />
       <Toasts />
     </div>
   )

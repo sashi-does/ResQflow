@@ -5,7 +5,7 @@ import type { AgentName, LogEntry } from '../types'
 
 const AGENTS: AgentName[] = ['monitor', 'inventory', 'routing', 'coordinator', 'validator', 'dispatcher', 'human']
 
-function Entry({ e }: { e: LogEntry }) {
+function Entry({ e, fresh }: { e: LogEntry; fresh: boolean }) {
   const [open, setOpen] = useState(false)
   const select = useStore((s) => s.select)
   const selectedId = useStore((s) => s.selected?.entryId)
@@ -14,7 +14,7 @@ function Entry({ e }: { e: LogEntry }) {
   const isSel = selectedId === e.id
   return (
     <li
-      className={`feed-entry cursor-pointer border-l-2 px-3 py-2 ${isSel ? 'bg-slate-800/80' : 'hover:bg-slate-800/40'}`}
+      className={`${fresh ? 'feed-entry ' : ''}cursor-pointer border-l-2 px-3 py-2 ${isSel ? 'bg-slate-800/80' : 'hover:bg-slate-800/40'}`}
       style={{ borderLeftColor: color }}
       onClick={() => select(isSel ? null : { ...e.refs, entryId: e.id })}
       data-kind={e.kind}
@@ -55,6 +55,7 @@ export function AgentFeed() {
   const toggle = useStore((s) => s.toggleAgent)
   const thinking = useStore((s) => s.thinking)
   const shown = filter.length ? log.filter((e) => filter.includes(e.agent)) : log
+  const [mountedMax] = useState(() => log[0]?.id ?? 0)
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex flex-wrap gap-1 border-b border-slate-800 px-3 py-2">
@@ -86,7 +87,7 @@ export function AgentFeed() {
           </li>
         )}
         {shown.map((e) => (
-          <Entry key={e.id} e={e} />
+          <Entry key={e.id} e={e} fresh={e.id > mountedMax} />
         ))}
       </ul>
     </div>

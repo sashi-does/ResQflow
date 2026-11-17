@@ -64,3 +64,167 @@ export interface Scenario {
   trucks: { id: string; home_warehouse: string }[]
   presets: Preset[]
 }
+
+// ---------------------------------------------------------------- live state (docs/05_API_CONTRACT.md)
+
+export type TruckStatus = 'idle' | 'loading' | 'en_route' | 'unloading' | 'returning' | 'holding'
+export type CampLevel = 'critical' | 'low' | 'ok'
+export type AgentName =
+  | 'monitor'
+  | 'inventory'
+  | 'routing'
+  | 'coordinator'
+  | 'validator'
+  | 'dispatcher'
+  | 'human'
+  | 'system'
+
+export interface SimView {
+  sim_time: string
+  sim_seconds: number
+  running: boolean
+  speed: number
+  demo_timeline?: boolean
+  ended?: boolean
+}
+
+export interface TruckView {
+  id: string
+  status: TruckStatus
+  lat: number
+  lon: number
+  at_warehouse?: string | null
+  path_coords?: LatLon[]
+  order_id?: string | null
+  cargo?: Supplies
+  eta_sim_seconds?: number | null
+  heading_to?: string | null
+}
+
+export interface CampView {
+  id: string
+  stock: Supplies
+  incoming: Supplies
+  days_of_cover: number
+  water_days: number
+  status: CampLevel
+  cut_off: boolean
+  unserved_reason: string | null
+  priority_boost?: number
+}
+
+export interface WarehouseView {
+  id: string
+  stock: Supplies
+  available: Supplies
+  reserve: Supplies
+}
+
+export interface Hazard {
+  id: string
+  label: string
+  kind: 'flood' | 'edge_closure' | 'rain_advisory'
+  polygon: GeoJSON.Polygon | GeoJSON.MultiPolygon | null
+  edge_ids: string[]
+  severity: string
+  preset_id: string | null
+  district?: string | null
+  rain_24h_mm?: number | null
+}
+
+export type OrderStatus = 'proposed' | 'awaiting_approval' | 'dispatched' | 'delivered' | 'rejected' | 'failed'
+
+export interface Order {
+  id: string
+  warehouse_id: string
+  camp_id: string
+  truck_id: string
+  items: Supplies
+  weight_kg: number
+  priority: 'critical' | 'high' | 'normal'
+  reason: string
+  uses_reserve: boolean
+  approval_reasons: string[]
+  status: OrderStatus
+  source: 'llm' | 'heuristic'
+  created_at_sim: number
+  delivered_at_sim: number | null
+  eta_min: number | null
+}
+
+export interface LogRefs {
+  truck_ids: string[]
+  camp_ids: string[]
+  order_ids: string[]
+  hazard_ids: string[]
+  edge_ids: string[]
+}
+
+export interface LogEntry {
+  id: number
+  sim_time: string
+  sim_seconds: number
+  real_time: string
+  agent: AgentName
+  kind: string
+  summary: string
+  reasoning: string
+  refs: LogRefs
+}
+
+export interface KPIs {
+  people_hours_without_water: number
+  people_hours_without_food: number
+  deliveries_on_time_pct: number
+  deliveries_total: number
+  truck_hours_stuck: number
+  avg_delivery_min: number
+  supplies_delivered_kg: number
+}
+
+export interface KpiBundle {
+  agentic: KPIs
+  baseline: KPIs
+  delta_pct: Partial<Record<keyof KPIs, number | null>>
+}
+
+export interface CoordinatorView {
+  busy: boolean
+  last_plan_source: string | null
+  last_latency_ms: number | null
+  attempts: number
+  provider?: string
+}
+
+export interface Snapshot {
+  sim: SimView
+  trucks: TruckView[]
+  warehouses: WarehouseView[]
+  camps: CampView[]
+  hazards: Hazard[]
+  blocked_edge_ids: string[]
+  orders: Order[]
+  kpis: KpiBundle
+  coordinator: CoordinatorView
+  log?: LogEntry[]
+}
+
+export interface TickPayload extends SimView {
+  trucks: { id: string; lat: number; lon: number; status: TruckStatus }[]
+  camps: CampView[]
+  warehouses: WarehouseView[]
+}
+
+export interface ReroutePayload {
+  truck_id: string
+  old_path_coords: LatLon[]
+  new_path_coords: LatLon[]
+  reason: string
+  old_eta_sim_seconds: number
+  new_eta_sim_seconds: number | null
+}
+
+export interface WsMessage {
+  type: string
+  payload: unknown
+}

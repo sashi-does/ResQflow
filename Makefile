@@ -1,4 +1,4 @@
-.PHONY: setup dev backend frontend test lint fmt headless build start graph
+.PHONY: setup dev backend frontend test lint fmt headless build start graph e2e
 
 # Override if :8000 is taken, e.g. `make dev BACKEND_PORT=8010` (Vite proxies to it).
 BACKEND_PORT ?= 8000
@@ -33,6 +33,10 @@ fmt:
 
 headless:
 	cd backend && uv run python scripts/run_headless.py --scenario assam --until 24h
+
+# Browser smoke test (system Chrome, ports 8010/5174). Screenshots -> docs/screenshots/
+e2e:
+	cd frontend && npx playwright test
 
 graph:
 	cd backend && uv run python scripts/build_road_graph.py

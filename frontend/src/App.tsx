@@ -1,10 +1,22 @@
 import { useEffect } from 'react'
 import { api } from './api'
+import { ConnectionBanner } from './components/ConnectionBanner'
+import { DemoControls } from './components/DemoControls'
 import { MapView } from './components/MapView'
+import { RightPanel } from './components/RightPanel'
+import { Toasts } from './components/Toasts'
+import { TopBar } from './components/TopBar'
 import { useStore } from './store'
+import { useLiveSocket } from './ws'
 
 export default function App() {
-  const { health, scenario, error, setHealth, setScenario, setError } = useStore()
+  const setHealth = useStore((s) => s.setHealth)
+  const setScenario = useStore((s) => s.setScenario)
+  const setError = useStore((s) => s.setError)
+  const scenario = useStore((s) => s.scenario)
+  const error = useStore((s) => s.error)
+
+  useLiveSocket()
 
   useEffect(() => {
     api.health().then(setHealth).catch(() => setHealth(null))
@@ -16,15 +28,21 @@ export default function App() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex items-center gap-4 border-b border-slate-800 bg-slate-950 px-4 py-2">
-        <span className="font-semibold tracking-tight">RahatNet</span>
-        <span className="text-sm text-slate-400">{scenario?.name ?? 'Assam Floods'}</span>
-        {error && <span className="text-xs text-red-400">{error}</span>}
-        <span className="ml-auto text-xs text-slate-400">LLM: {health ? health.llm_provider : 'backend offline'}</span>
-      </header>
-      <main className="min-h-0 flex-1">
-        <MapView />
-      </main>
+      <TopBar />
+      <div className="flex min-h-0 flex-1">
+        <main className="relative min-w-0 flex-1">
+          <MapView />
+          {scenario && <DemoControls />}
+          <ConnectionBanner />
+          {!scenario && (
+            <div className="absolute inset-0 z-[1002] flex items-center justify-center bg-slate-950/80 text-sm text-slate-400">
+              {error ? `Could not load the scenario: ${error}` : 'Loading the Assam scenario…'}
+            </div>
+          )}
+        </main>
+        <RightPanel />
+      </div>
+      <Toasts />
     </div>
   )
 }

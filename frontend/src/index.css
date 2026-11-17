@@ -15,12 +15,44 @@ body,
 body {
   background: var(--color-slate-900);
   color: var(--color-slate-100);
+  font-feature-settings: 'tnum' 0;
 }
 
 .leaflet-container {
   background: var(--color-slate-950);
+  font-family: var(--font-sans);
 }
 
+/* ---------- buttons ---------- */
+@layer components {
+  .btn-primary {
+    @apply rounded-md bg-sky-500 px-3 py-1 text-sm font-semibold text-slate-950 hover:bg-sky-400 disabled:opacity-40;
+  }
+  .btn-icon {
+    @apply flex h-7 w-7 items-center justify-center rounded text-sm text-slate-200 hover:bg-slate-800 disabled:opacity-30;
+  }
+  .btn-chip {
+    @apply rounded border border-slate-600 px-2 py-0.5 text-xs text-slate-200 hover:border-slate-400 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-approve {
+    @apply rounded-md bg-emerald-500 py-1.5 text-sm font-semibold text-slate-950 hover:bg-emerald-400 disabled:opacity-40;
+  }
+  .btn-reject {
+    @apply rounded-md border border-red-500/70 py-1.5 text-sm font-semibold text-red-300 hover:bg-red-500/10 disabled:opacity-40;
+  }
+}
+
+/* ---------- map labels / tooltips ---------- */
+.leaflet-tooltip {
+  background: rgb(15 23 42 / 0.95);
+  border: 1px solid #334155;
+  color: #e2e8f0;
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.4);
+}
+.leaflet-tooltip-top::before {
+  border-top-color: #334155;
+}
 .leaflet-tooltip.node-label {
   background: transparent;
   border: none;
@@ -28,8 +60,167 @@ body {
   color: #cbd5e1;
   font-size: 10px;
   padding: 0 2px;
-  text-shadow: 0 0 3px #020617;
+  text-shadow: 0 0 3px #020617, 0 0 2px #020617;
 }
 .leaflet-tooltip.node-label::before {
   display: none;
+}
+.leaflet-tooltip.hazard-label {
+  background: rgb(30 58 138 / 0.75);
+  padding: 1px 6px;
+  border-color: #60a5fa;
+  color: #dbeafe;
+  font-size: 10px;
+  font-weight: 600;
+}
+.leaflet-tooltip.hazard-label::before {
+  display: none;
+}
+.leaflet-tooltip.flash-label {
+  background: #052e16;
+  border: 1px solid #4ade80;
+  color: #bbf7d0;
+  font-weight: 600;
+  font-size: 12px;
+  animation: label-pop 0.4s ease-out;
+}
+.leaflet-tooltip.flash-label::before {
+  border-top-color: #4ade80;
+}
+
+/* ---------- markers ---------- */
+.wh-icon {
+  width: 16px;
+  height: 16px;
+  background: #6366f1;
+  border: 2px solid #e0e7ff;
+  border-radius: 3px;
+  box-shadow: 0 0 8px #6366f1;
+}
+.truck-icon {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 20px;
+  padding: 0 4px;
+  border: 1.5px solid;
+  border-radius: 10px;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  width: max-content;
+}
+
+/* ---------- map effects ---------- */
+.road-blocked {
+  animation: road-pulse 1.4s ease-in-out infinite;
+  filter: drop-shadow(0 0 3px #ef4444);
+}
+@keyframes road-pulse {
+  0%,
+  100% {
+    stroke-opacity: 1;
+  }
+  50% {
+    stroke-opacity: 0.35;
+  }
+}
+.hazard-poly {
+  animation: hazard-in 1.2s ease-out;
+}
+@keyframes hazard-in {
+  from {
+    fill-opacity: 0;
+    stroke-opacity: 0;
+  }
+}
+.camp-critical {
+  animation: camp-pulse 1.2s ease-in-out infinite;
+}
+@keyframes camp-pulse {
+  0%,
+  100% {
+    stroke-width: 2.5;
+    stroke-opacity: 1;
+  }
+  50% {
+    stroke-width: 9;
+    stroke-opacity: 0.35;
+  }
+}
+
+/* re-route flash: old route red, marching and fading; new route draws itself in green */
+.flash-old {
+  stroke-dasharray: 12 8;
+  animation:
+    march 0.6s linear infinite,
+    fade-out 3s ease-in forwards;
+  filter: drop-shadow(0 0 6px #ef4444);
+}
+@keyframes march {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+@keyframes fade-out {
+  0%,
+  45% {
+    stroke-opacity: 1;
+  }
+  100% {
+    stroke-opacity: 0;
+  }
+}
+.flash-new {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation:
+    draw-in 1.6s ease-out forwards,
+    glow 0.9s ease-in-out 1.6s 4 alternate;
+  filter: drop-shadow(0 0 8px #22c55e);
+}
+@keyframes draw-in {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes glow {
+  from {
+    stroke-width: 6;
+  }
+  to {
+    stroke-width: 9;
+  }
+}
+@keyframes label-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+
+/* ---------- feed ---------- */
+.shimmer {
+  background: linear-gradient(90deg, transparent, rgb(16 185 129 / 0.15), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s linear infinite;
+}
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+.feed-entry {
+  animation: entry-in 0.35s ease-out;
+}
+@keyframes entry-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
 }

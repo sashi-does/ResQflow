@@ -1,5 +1,16 @@
 import { CircleMarker, Tooltip } from 'react-leaflet'
+import { shortName } from '../../lib/format'
 import type { Node } from '../../types'
+
+// nudge labels that would collide with neighbours or flood labels
+const LABEL_DIR: Record<string, 'right' | 'left' | 'bottom' | 'top'> = {
+  NMG: 'bottom',
+  KLB: 'bottom',
+  BKT: 'top',
+  NMT: 'right',
+  JGR: 'bottom',
+  GHY: 'bottom',
+}
 
 export function NodesLayer({ nodes }: { nodes: Node[] }) {
   return (
@@ -9,10 +20,16 @@ export function NodesLayer({ nodes }: { nodes: Node[] }) {
           key={n.id}
           center={[n.lat, n.lon]}
           radius={2.5}
+          interactive={false}
           pathOptions={{ color: '#cbd5e1', fillColor: '#cbd5e1', fillOpacity: 1, weight: 1 }}
         >
-          <Tooltip direction="right" offset={[4, 0]} permanent className="node-label">
-            {n.name}
+          <Tooltip
+            direction={LABEL_DIR[n.id] ?? 'right'}
+            offset={LABEL_DIR[n.id] === 'bottom' ? [0, 4] : LABEL_DIR[n.id] === 'top' ? [0, -6] : [6, 0]}
+            permanent
+            className="node-label"
+          >
+            {shortName(n.name)}
           </Tooltip>
         </CircleMarker>
       ))}

@@ -1,0 +1,26 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.sqlite3
+*.db
+
+# node / frontend
+node_modules/
+dist/
+frontend/dist/
+
+# built frontend served by FastAPI
+backend/app/static/
+
+# os / editor
+.DS_Store
+.idea/
+.vscode/

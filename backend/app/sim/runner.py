@@ -42,10 +42,7 @@ class Simulation:
 
     def due_events(self) -> list[TimelineEvent]:
         due = []
-        while (
-            self._next_event < len(self.timeline)
-            and self.timeline[self._next_event].at_s <= self.world.sim_seconds
-        ):
+        while self._next_event < len(self.timeline) and self.timeline[self._next_event].at_s <= self.world.sim_seconds:
             due.append(self.timeline[self._next_event])
             self._next_event += 1
         return due

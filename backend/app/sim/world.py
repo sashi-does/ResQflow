@@ -55,9 +55,7 @@ class WorldState:
             )
         self.hazards: dict[str, Hazard] = {}
         self.orders: dict[str, Order] = {}
-        self._consumption_acc: dict[str, dict[str, float]] = {
-            cid: dict.fromkeys(ITEMS, 0.0) for cid in self.camps
-        }
+        self._consumption_acc: dict[str, dict[str, float]] = {cid: dict.fromkeys(ITEMS, 0.0) for cid in self.camps}
         self.kpi = KpiAccumulator()
         self._next_order = 1
         self._next_hazard = 1
@@ -105,12 +103,26 @@ class WorldState:
     def reserve_level(self, w: Warehouse) -> Supplies:
         return Supplies(**{i: math.ceil(w.safety_ratio * w.initial_stock.get(i)) for i in ITEMS})
 
-    def available(self, w: Warehouse) -> Supplies:
-        """Stock above the safety reserve. Stock is deducted at dispatch, so nothing else is committed."""
-        return (w.stock - self.reserve_level(w)).clamp0()
+    def committed(self, w: Warehouse, exclude: frozenset[str] | set[str] = frozenset()) -> Supplies:
+        """Stock promised to orders awaiting approval (dispatched orders are already deducted)."""
+        total = Supplies()
+        for o in self.orders.values():
+            if o.warehouse_id == w.id and o.status == "awaiting_approval" and o.id not in exclude:
+                total = total + o.items
+        return total
 
-    def reserve_held(self, w: Warehouse) -> Supplies:
-        return Supplies(**{i: min(w.stock.get(i), self.reserve_level(w).get(i)) for i in ITEMS})
+    def available(self, w: Warehouse, exclude: frozenset[str] | set[str] = frozenset()) -> Supplies:
+        """Stock above the safety reserve, minus stock committed to orders awaiting approval."""
+        return (w.stock - self.reserve_level(w) - self.committed(w, exclude)).clamp0()
+
+    def reserve_held(self, w: Warehouse, exclude: frozenset[str] | set[str] = frozenset()) -> Supplies:
+        """The part of the safety reserve still physically in stock (usable only with approval)."""
+        free = (w.stock - self.committed(w, exclude)).clamp0()
+        return Supplies(**{i: min(free.get(i), self.reserve_level(w).get(i)) for i in ITEMS})
+
+    def truck_is_free(self, truck_id: str, exclude: frozenset[str] | set[str] = frozenset()) -> bool:
+        t = self.trucks[truck_id]
+        return t.status == "idle" and t.at_warehouse is not None and (t.order_id is None or t.order_id in exclude)
 
     def burn_per_day(self, camp: Camp) -> dict[str, float]:
         return {i: camp.population * self.per_capita[i] for i in ITEMS}

@@ -27,9 +27,7 @@ def test_flood_presets_have_geojson_polygons():
         assert h.polygon is not None
         assert h.polygon["type"] in ("Polygon", "MultiPolygon")
         lon, lat = (
-            h.polygon["coordinates"][0][0]
-            if h.polygon["type"] == "Polygon"
-            else h.polygon["coordinates"][0][0][0]
+            h.polygon["coordinates"][0][0] if h.polygon["type"] == "Polygon" else h.polygon["coordinates"][0][0][0]
         )
         assert 89 < lon < 96 and 25 < lat < 28
 

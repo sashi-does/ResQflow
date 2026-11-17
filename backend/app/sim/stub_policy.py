@@ -37,9 +37,7 @@ class StubPolicy:
                 continue
             _, t, w = best
             idle.remove(t)
-            items = _fill(
-                world, camp_burn=world.burn_per_day(camp), cap=t.capacity_kg, avail=world.available(w)
-            )
+            items = _fill(world, camp_burn=world.burn_per_day(camp), cap=t.capacity_kg, avail=world.available(w))
             order = Order(
                 id=world.new_order_id(),
                 warehouse_id=w.id,

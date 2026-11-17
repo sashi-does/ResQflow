@@ -36,3 +36,27 @@ def fmt_days(days: float) -> str:
 
 def join_roads(roads: list[str], limit: int = 4) -> str:
     return " / ".join(roads[:limit]) + (" / …" if len(roads) > limit else "")
+
+
+def road_tokens(roads: list[str]) -> list[str]:
+    """['NH-27', 'NH-27 / NH-29', 'NH-129 (via Dimapur)'] -> ['NH-27', 'NH-29', 'NH-129']"""
+    out: list[str] = []
+    for r in roads:
+        for part in r.split(" / "):
+            name = part.split(" (")[0].strip()
+            if name and name not in out:
+                out.append(name)
+    return out
+
+
+def describe_route(town_names: list[str], roads: list[str]) -> str:
+    """'Dabaka, Bokajan and Numaligarh (NH-27, NH-29, NH-129)'"""
+    towns = [t.split(" (")[0] for t in town_names]
+    if not towns:
+        via = ""
+    elif len(towns) == 1:
+        via = towns[0]
+    else:
+        via = ", ".join(towns[:-1]) + " and " + towns[-1]
+    toks = road_tokens(roads)
+    return f"{via} ({', '.join(toks)})" if via else ", ".join(toks)

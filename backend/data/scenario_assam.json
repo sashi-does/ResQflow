@@ -388,9 +388,9 @@
    "district": "Barpeta",
    "population": 4400,
    "stock": {
-    "food_rations": 6600,
-    "water_l": 18000,
-    "medical_kits": 60
+    "food_rations": 3960,
+    "water_l": 10600,
+    "medical_kits": 39
    }
   },
   {
@@ -400,9 +400,9 @@
    "district": "Morigaon",
    "population": 5200,
    "stock": {
-    "food_rations": 4000,
-    "water_l": 8000,
-    "medical_kits": 30
+    "food_rations": 3640,
+    "water_l": 8600,
+    "medical_kits": 36
    }
   },
   {
@@ -412,9 +412,9 @@
    "district": "Biswanath",
    "population": 3000,
    "stock": {
-    "food_rations": 5200,
-    "water_l": 13000,
-    "medical_kits": 40
+    "food_rations": 3000,
+    "water_l": 8100,
+    "medical_kits": 30
    }
   },
   {
@@ -424,9 +424,9 @@
    "district": "Biswanath",
    "population": 2400,
    "stock": {
-    "food_rations": 3000,
-    "water_l": 6000,
-    "medical_kits": 24
+    "food_rations": 1680,
+    "water_l": 3000,
+    "medical_kits": 16
    }
   },
   {
@@ -436,9 +436,9 @@
    "district": "Dhemaji",
    "population": 6000,
    "stock": {
-    "food_rations": 5000,
-    "water_l": 12000,
-    "medical_kits": 40
+    "food_rations": 3600,
+    "water_l": 6800,
+    "medical_kits": 36
    }
   },
   {
@@ -448,9 +448,9 @@
    "district": "Golaghat",
    "population": 3600,
    "stock": {
-    "food_rations": 3600,
-    "water_l": 9000,
-    "medical_kits": 30
+    "food_rations": 2880,
+    "water_l": 5400,
+    "medical_kits": 28
    }
   },
   {
@@ -460,9 +460,9 @@
    "district": "Majuli",
    "population": 4800,
    "stock": {
-    "food_rations": 4800,
-    "water_l": 10000,
-    "medical_kits": 36
+    "food_rations": 3360,
+    "water_l": 5800,
+    "medical_kits": 33
    }
   },
   {
@@ -472,9 +472,9 @@
    "district": "Goalpara",
    "population": 3200,
    "stock": {
-    "food_rations": 5200,
-    "water_l": 14000,
-    "medical_kits": 40
+    "food_rations": 3520,
+    "water_l": 9600,
+    "medical_kits": 35
    }
   }
  ],
@@ -536,7 +536,7 @@
  },
  "timeline": [
   {
-   "at": "D1 08:30",
+   "at": "D1 07:15",
    "action": "hazard_add",
    "preset_id": "F1"
   },

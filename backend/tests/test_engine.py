@@ -52,11 +52,12 @@ def test_camp_consumption_matches_hand_calculation():
     sc = load_scenario()
     world = WorldState(sc)
     Simulation(world, NullPolicy()).run_until(2 * 3600)
-    c2 = world.camps["C2"]  # Morigaon: 5,200 people, starts with 8,000 L / 4,000 rations / 30 kits
+    c2 = world.camps["C2"]  # Morigaon: 5,200 people
+    start = sc.raw["camps"][1]["stock"]
     # 2 h of burn: water 5200*3*2/24 = 1300 L; food 5200*2/24 = 433.3; kits 52*2/24 = 4.33
-    assert c2.stock.water_l == 8000 - 1300
-    assert c2.stock.food_rations == 4000 - 433
-    assert c2.stock.medical_kits == 30 - 4
+    assert c2.stock.water_l == start["water_l"] - 1300
+    assert c2.stock.food_rations == start["food_rations"] - 433
+    assert c2.stock.medical_kits == start["medical_kits"] - 4
 
 
 def test_people_hours_without_water_accumulate_after_stockout():
@@ -72,9 +73,11 @@ def test_delivery_moves_stock_from_warehouse_to_camp():
     world = run_stub(until=6 * 3600)
     delivered = [o for o in world.orders.values() if o.status == "delivered"]
     assert delivered, "stub should complete deliveries within 6h"
-    w2 = world.warehouses["W2"]
-    assert w2.stock.water_l < w2.initial_stock.water_l
+    for o in delivered:
+        w = world.warehouses[o.warehouse_id]
+        assert w.stock.water_l < w.initial_stock.water_l
     assert world.kpi.deliveries_total == len(delivered)
+    assert world.kpi.supplies_delivered_kg == sum(o.weight_kg for o in delivered)
 
 
 def test_trucks_wait_at_blocked_edge_and_count_stuck_hours():

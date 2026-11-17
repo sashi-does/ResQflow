@@ -46,14 +46,30 @@ def dispatch(world: WorldState, order: Order) -> None:
 
 
 def set_path(world: WorldState, t: Truck, path: Path, *, status: str, leg: str | None) -> None:
-    t.path_nodes = list(path.nodes)
-    t.path_edge_ids = list(path.edge_ids)
-    t.progress_km = 0.0
-    t.turned_back = False
+    apply_route(world, t, list(path.nodes), list(path.edge_ids), 0.0, False, status=status, leg=leg)
+
+
+def apply_route(
+    world: WorldState,
+    t: Truck,
+    nodes: list[str],
+    edge_ids: list[str],
+    progress_km: float,
+    may_cross_blocked: bool,
+    *,
+    status: str,
+    leg: str | None,
+) -> None:
+    """Set a truck's remaining route. `nodes[0]` is the node it is moving away from."""
+    t.path_nodes = nodes
+    t.path_edge_ids = edge_ids
+    t.progress_km = progress_km
+    t.may_cross_blocked = may_cross_blocked
+    t.node_id = nodes[0] if progress_km == 0 else None
     t.status = status  # type: ignore[assignment]
     t.leg = leg  # type: ignore[assignment]
     t.at_warehouse = None
-    t.destination_node = path.nodes[-1]
+    t.destination_node = nodes[-1]
     _update_eta(world, t)
 
 
@@ -83,9 +99,11 @@ def remaining_minutes(world: WorldState, t: Truck) -> float:
 
 
 def send_to_nearest_warehouse(world: WorldState, t: Truck) -> None:
-    node = t.node_id or ""
+    """Head for the nearest reachable warehouse (finishing the current road first if mid-edge)."""
+    mid_edge = t.node_id is None and len(t.path_nodes) > 1 and bool(t.path_edge_ids)
+    node = t.path_nodes[1] if mid_edge else (t.node_id or "")
     here = world.warehouse_at_node(node)
-    if here:
+    if here and not mid_edge:
         _become_idle(world, t, here.id)
         return
     best: tuple[float, str, Path] | None = None
@@ -94,9 +112,34 @@ def send_to_nearest_warehouse(world: WorldState, t: Truck) -> None:
         if p and (best is None or p.minutes < best[0]):
             best = (p.minutes, w.id, p)
     if best is None:
-        _hold(world, t, "no safe road back to any warehouse")
+        if mid_edge:  # finish this road, then hold at the next node
+            apply_route(
+                world,
+                t,
+                t.path_nodes[:2],
+                t.path_edge_ids[:1],
+                t.progress_km,
+                t.may_cross_blocked,
+                status="en_route",
+                leg="hold",
+            )
+        else:
+            _hold(world, t, "no safe road back to any warehouse")
         return
-    set_path(world, t, best[2], status="returning", leg="return")
+    if mid_edge:
+        p = best[2]
+        apply_route(
+            world,
+            t,
+            [t.path_nodes[0], *p.nodes],
+            [t.path_edge_ids[0], *p.edge_ids],
+            t.progress_km,
+            t.may_cross_blocked,
+            status="returning",
+            leg="return",
+        )
+    else:
+        set_path(world, t, best[2], status="returning", leg="return")
     emit_truck(world, t)
 
 
@@ -143,7 +186,7 @@ def _move(world: WorldState, t: Truck, dt: float, blocked: set[str]) -> None:
     remaining = float(dt)
     while remaining > 1e-9 and t.path_edge_ids:
         e = world.graph.edges[t.path_edge_ids[0]]
-        if e.id in blocked and not t.turned_back:
+        if e.id in blocked and not t.may_cross_blocked:
             # The road ahead (or under the truck) is flooded: wait until it reopens.
             t.stuck = True
             world.kpi.truck_hours_stuck += remaining / 3600
@@ -156,7 +199,7 @@ def _move(world: WorldState, t: Truck, dt: float, blocked: set[str]) -> None:
             t.path_nodes.pop(0)
             t.path_edge_ids.pop(0)
             t.progress_km = 0.0
-            t.turned_back = False
+            t.may_cross_blocked = False
             t.node_id = t.path_nodes[0]
         else:
             t.progress_km += e.speed_kmh * remaining / 3600
@@ -199,6 +242,9 @@ def _arrive(world: WorldState, t: Truck) -> None:
     t.node_id = node
     t.path_nodes, t.path_edge_ids, t.progress_km = [], [], 0.0
     t.destination_node = None
+    if t.leg == "hold":
+        _hold(world, t, "no safe road onward")
+        return
     if t.leg == "reposition":
         _start_loading(world, t)
     elif t.leg == "delivery":
@@ -261,6 +307,10 @@ def _finish_unloading(world: WorldState, t: Truck) -> None:
 
 
 def _become_idle(world: WorldState, t: Truck, warehouse_id: str) -> None:
+    if not t.cargo.is_empty():  # a recalled load goes back into stock
+        w = world.warehouses[warehouse_id]
+        w.stock = w.stock + t.cargo
+        t.cargo = Supplies()
     t.status = "idle"
     t.leg = None
     t.at_warehouse = warehouse_id

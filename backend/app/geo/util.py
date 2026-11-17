@@ -18,9 +18,7 @@ def haversine_km(a: tuple[float, float], b: tuple[float, float]) -> float:
 
 def densify(a: tuple[float, float], b: tuple[float, float], n: int = 20) -> list[tuple[float, float]]:
     """n+1 evenly spaced [lat, lon] points from a to b (straight line)."""
-    return [
-        (round(a[0] + (b[0] - a[0]) * i / n, 6), round(a[1] + (b[1] - a[1]) * i / n, 6)) for i in range(n + 1)
-    ]
+    return [(round(a[0] + (b[0] - a[0]) * i / n, 6), round(a[1] + (b[1] - a[1]) * i / n, 6)) for i in range(n + 1)]
 
 
 def to_xy(lat: float, lon: float) -> tuple[float, float]:

@@ -13,9 +13,7 @@ EdgeKind = Literal["nh", "sh", "local", "ferry"]
 TruckStatus = Literal["idle", "loading", "en_route", "unloading", "returning", "holding"]
 OrderStatus = Literal["proposed", "awaiting_approval", "dispatched", "delivered", "rejected", "failed"]
 HazardKind = Literal["flood", "edge_closure", "rain_advisory"]
-AgentName = Literal[
-    "monitor", "inventory", "routing", "coordinator", "validator", "dispatcher", "human", "system"
-]
+AgentName = Literal["monitor", "inventory", "routing", "coordinator", "validator", "dispatcher", "human", "system"]
 
 
 class Supplies(BaseModel):
@@ -119,8 +117,8 @@ class Truck(BaseModel):
     destination_node: str | None = None
     timer_s: float = 0.0  # remaining loading/unloading time
     eta_sim_seconds: int | None = None
-    leg: Literal["reposition", "delivery", "return"] | None = None
-    turned_back: bool = False  # retreating along an edge that flooded under it
+    leg: Literal["reposition", "delivery", "return", "hold"] | None = None
+    may_cross_blocked: bool = False  # cleared to drive on its (blocked) current edge: the flooded part is behind it
     stuck: bool = False  # waiting at/on a blocked edge this step
 
 

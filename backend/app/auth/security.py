@@ -13,17 +13,31 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.auth.context import current_actor
 from app.auth.users import User
-from app.config import get_settings
+from app.config import BACKEND_DIR, get_settings
 
 TOKEN_TTL_S = 12 * 3600
 _bearer = HTTPBearer(auto_error=False)
 _BEARER = Depends(_bearer)
 
 
+SECRET_FILE = BACKEND_DIR / ".jwt_secret"
+
+
 @lru_cache
 def _secret() -> str:
-    # No JWT_SECRET set: a random per-process secret (tokens stop working on restart; fine for the demo).
-    return get_settings().jwt_secret or secrets.token_hex(32)
+    """JWT_SECRET from env; otherwise a random secret generated once and kept in backend/.jwt_secret (git-ignored),
+    so restarts (and `--reload` in dev) don't log everyone out."""
+    if get_settings().jwt_secret:
+        return get_settings().jwt_secret
+    try:
+        if SECRET_FILE.exists():
+            return SECRET_FILE.read_text().strip()
+        value = secrets.token_hex(32)
+        SECRET_FILE.write_text(value)
+        SECRET_FILE.chmod(0o600)
+        return value
+    except OSError:  # read-only filesystem: per-process secret
+        return secrets.token_hex(32)
 
 
 def issue_token(user: User) -> str:

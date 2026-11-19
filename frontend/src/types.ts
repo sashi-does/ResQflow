@@ -185,7 +185,7 @@ export interface WarehouseView {
 export interface Hazard {
   id: string
   label: string
-  kind: 'flood' | 'edge_closure' | 'rain_advisory'
+  kind: 'flood' | 'edge_closure' | 'rain_advisory' | 'driver_report'
   polygon: GeoJSON.Polygon | GeoJSON.MultiPolygon | null
   edge_ids: string[]
   severity: string
@@ -217,6 +217,7 @@ export interface Order {
   approval_requested_at_sim: number | null
   auto_approve_at_sim: number | null
   eta_min: number | null
+  loaded_confirmed?: boolean
 }
 
 export interface ApprovalPolicy {
@@ -243,6 +244,7 @@ export interface LogEntry {
   summary: string
   reasoning: string
   refs: LogRefs
+  actor?: string | null
 }
 
 export interface KPIs {
@@ -288,8 +290,9 @@ export interface Snapshot {
   hazards: Hazard[]
   blocked_edge_ids: string[]
   orders: Order[]
-  kpis: KpiBundle
-  coordinator: CoordinatorView
+  kpis?: KpiBundle
+  coordinator?: CoordinatorView
+  alerts?: import('./api').CampAlert[]
   policy?: ApprovalPolicy
   field_reports?: FieldReport[]
   receipts?: Record<string, { received: Supplies; shortfall: Supplies }>

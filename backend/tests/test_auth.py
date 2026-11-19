@@ -141,3 +141,11 @@ def test_camp_alerts_and_warehouse_mark_loaded_are_attributed(client):
     assert client.post(f"/api/orders/{o.id}/loaded", headers=wh).json()["loaded_confirmed"] is True
     e = live.world.bus.entries[-1]
     assert e.kind == "order.loaded" and e.actor and e.actor.startswith("Pranjal Saikia")
+
+
+def test_inject_fault_toggle_is_officer_only(client):
+    assert client.post("/api/sim/inject-fault", json={"enabled": True}, headers=H("driver.t3")).status_code == 403
+    assert client.post("/api/sim/inject-fault", json={"enabled": True}, headers=H()).json() == {"enabled": True}
+    assert client.get("/api/health").json()["demo_inject_fault"] is True
+    client.post("/api/sim/inject-fault", json={"enabled": False}, headers=H())
+    assert client.get("/api/health").json()["demo_inject_fault"] is False

@@ -13,12 +13,15 @@ test('UI shows a banner when the backend dies and recovers when it comes back', 
   const errors: string[] = []
   page.on('pageerror', (err) => errors.push(err.message))
 
-  await page.goto('/command')
+  await page.goto('/login')
+  await page.getByTestId('demo-officer').click()
+  await expect(page.getByTestId('page-title')).toBeVisible()
+  await page.goto('/officer/simulation')
   await expect(page.getByTestId('sim-time')).toHaveText(/D\d \d\d:\d\d/)
-  await expect(page.getByText('Connection to the simulation lost')).toHaveCount(0)
+  await expect(page.getByTestId('connection-banner')).toHaveCount(0)
 
   killBackend()
-  await expect(page.getByText('Connection to the simulation lost. Reconnecting…')).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByTestId('connection-banner')).toBeVisible({ timeout: 15_000 })
 
   const server = spawn('uv', ['run', 'uvicorn', 'app.main:app', '--port', String(BACKEND_PORT)], {
     cwd: '../backend',
@@ -26,10 +29,11 @@ test('UI shows a banner when the backend dies and recovers when it comes back', 
     detached: true,
   })
   try {
-    await expect(page.getByText('Connection to the simulation lost')).toHaveCount(0, { timeout: 30_000 })
-    await expect(page.getByTestId('sim-time')).toHaveText('D1 06:00') // fresh server -> fresh snapshot
+    await expect(page.getByTestId('connection-banner')).toHaveCount(0, { timeout: 30_000 })
+    await expect(page.getByTestId('sim-time')).toHaveText('D1 06:00') // fresh server -> fresh snapshot, same login
+    await expect(page).toHaveURL(/\/officer\/simulation$/)
     await page.getByTestId('run-demo').click()
-    await expect(page.getByTestId('feed').locator('[data-kind="order.dispatched"]').first()).toBeVisible()
+    await expect(page.getByTestId('stat-clock')).toContainText('Running')
   } finally {
     if (server.pid) process.kill(-server.pid)
   }

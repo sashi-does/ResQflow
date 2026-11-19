@@ -76,7 +76,7 @@ def test_report_endpoint_matches_kpi_strip_and_auto_report_at_end():
         r = c.post("/api/report").json()
         assert r["kpis"] == c.get("/api/kpis").json()  # End & report: identical to what the KPI strip shows
         c.post("/api/sim/reset", json={"demo_timeline": True})
-        assert c.get("/api/report").status_code == 404
+        assert c.get("/api/report").json() is None
         c.post("/api/sim/advance", json={"minutes": 24 * 60 + 5})  # runs to D2 06:00 and ends
         for _ in range(50):
             got = c.get("/api/report")

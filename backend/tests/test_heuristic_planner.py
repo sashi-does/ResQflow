@@ -57,3 +57,20 @@ def test_heuristic_serves_most_critical_first(world):
     plan = heuristic_plan(world, statuses)
     top = max(statuses.values(), key=lambda s: s.priority_score)
     assert plan["orders"][0]["camp_id"] == top.camp_id
+
+
+def test_loads_are_balanced_by_days_of_cover(world):
+    """A camp out of water AND short of food gets both: water-first loading used to fill the truck with water only
+    (a confirmed field report doubling Majuli then starved it of food; doc 11 walkthrough)."""
+    camp = world.camps["C7"]
+    camp.population = 7000
+    burn = world.burn_per_day(camp)
+    camp.stock = Supplies(
+        water_l=0, food_rations=int(0.2 * burn["food_rations"]), medical_kits=int(burn["medical_kits"])
+    )
+    statuses = InventoryAgent().run(world)
+    plan = heuristic_plan(world, statuses)
+    loads = [o["items"] for o in plan["orders"] if o["camp_id"] == "C7"]
+    assert loads, "Majuli must be served"
+    assert all(i["water_l"] > 0 and i["food_rations"] > 0 for i in loads)
+    assert validate(world, plan, statuses=statuses).ok

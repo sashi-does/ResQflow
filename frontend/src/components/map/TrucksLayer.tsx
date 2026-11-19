@@ -57,6 +57,7 @@ export function TrucksLayer() {
       if (!a) {
         const marker = L.marker(to, { icon: truckIcon(t, isSel), zIndexOffset: 1000, keyboard: false })
         marker.bindTooltip('', { direction: 'top', offset: [0, -10] })
+        marker.on('click', () => useStore.getState().setPick({ kind: 'truck', id: t.id }))
         marker.addTo(map)
         a = { marker, from: to, to, t0: now, iconKey }
         anim.current.set(t.id, a)

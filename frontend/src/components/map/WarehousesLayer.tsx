@@ -34,7 +34,7 @@ export function WarehousesLayer({ warehouses, nodes }: { warehouses: WarehouseDe
         const v = live[w.id]
         const stock = v?.stock ?? w.stock
         return (
-          <Marker key={w.id} position={[n.lat, n.lon]} icon={icon} zIndexOffset={500}>
+          <Marker key={w.id} position={[n.lat, n.lon]} icon={icon} zIndexOffset={500} eventHandlers={{ click: () => useStore.getState().setPick({ kind: 'warehouse', id: w.id }) }}>
             <Tooltip direction="top" offset={[0, -8]}>
               <div className="text-xs">
                 <b>

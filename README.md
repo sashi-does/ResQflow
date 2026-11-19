@@ -10,7 +10,7 @@ IDEA//FORGE AI & Agents Hackathon · Track 2 · Problem 4: *Autonomous Emergency
 
 > 🚧 Work in progress. This README is completed in Phase 9 (architecture, video, deploy link).
 
-![Re-route flash](docs/screenshots/02-flood-reroute-flash.png)
+![Officer Overview](docs/screenshots/walkthrough/02-officer-overview.png)
 
 ## Quick start (no API keys needed)
 
@@ -19,19 +19,25 @@ make setup      # uv sync (backend) + npm install (frontend)
 make dev        # backend :8000 + dashboard http://localhost:5173  (BACKEND_PORT=8010 if :8000 is taken)
 make headless   # the whole 24 h scenario without UI: decision log + Agentic vs Static KPIs, ~1 s
 make test       # backend tests
-make e2e        # browser smoke test (uses your installed Chrome), writes docs/screenshots/
+make e2e        # browser tests (uses your installed Chrome); screenshots → docs/screenshots/walkthrough/
 ```
 
-Open http://localhost:5173 → **Watch the live demo**. Keyboard on `/command`: `Space` play/pause · `1`–`4` trigger floods · `A` approve the top order.
+Open http://localhost:5173/login and click a **demo account** (all fictional; password `demo1234`). Each browser tab keeps
+its own login (sessionStorage), so you can open four tabs side by side, one per role. The presenter's script is
+[`docs/WALKTHROUGH.md`](docs/WALKTHROUGH.md).
 
-## Four roles, one live world ("View as" switcher, no login)
+## Four roles, one live world (real login, role-based access)
 
-| Role | Route | What they do |
+| Role | Demo login | Pages |
 |---|---|---|
-| District Command | `/command` | Live map, agent feed, **Agents** graph, approvals (with an approval policy), confirmations, **Ask RahatNet** copilot, after-action report |
-| Camp Coordinator | `/camp/C7` | Phone view: supplies, incoming trucks, **free-text field reports in English or Assamese** (Field Intake AI), delivery receipts |
-| Driver | `/driver/T3` | Phone view: job, road-by-road route, **full-screen re-route alert + Acknowledge**, report road problems (unverified until confirmed) |
-| Warehouse | `/warehouse/W2` | Stock vs safety reserve, loading queue, stock adjustments |
+| District Officer | `officer` (Ritu Baruah) | Overview · Live Operations · Approvals · Field Reports · AI Agents · Ask RahatNet · Reports · Simulation *(demo tools: the only page with sim controls)* |
+| Camp Coordinator | `camp.majuli` (Mousumi Gogoi), `camp.morigaon` (Anil Das) | My Camp · Send Report (Assamese/English, Field Intake AI) · Deliveries (confirm received) · Alerts (Assamese + English) |
+| Truck Driver | `driver.t3` (Bikash Kalita) | My Trip (+ full-screen re-route alert → Acknowledge) · Report Road · History |
+| Warehouse Manager | `wh.nagaon` (Pranjal Saikia) | Stock (vs 20% safety reserve) · Loading Queue (Mark loaded) · Receive Stock |
+
+JWT (HS256, 12 h) with bcrypt-hashed seeded users in SQLite. Every endpoint checks role **and scope** (a Morigaon
+coordinator can't report for Majuli → 403), the WebSocket only sends each role what it may see (a driver gets only
+its own truck), and every human action is attributed by name in the decision log. Set `JWT_SECRET` in production.
 
 ## Where the AI is, and how it is kept honest
 - **Coordinator** (Claude, `LLM_MODEL`, default `claude-haiku-5-5`) proposes the allocation plan; a deterministic **validator** checks every
@@ -67,25 +73,33 @@ KPIs: **people-hours without water** (Σ population × hours a camp has 0 L), pe
 (arrived before the camp ran out of water), deliveries, **truck-hours stuck** (holding or waiting at a flooded road),
 average delivery time (order created → delivered), and supplies delivered.
 
-## Results so far (headless, seed 42, mock coordinator, 24 sim-hours)
+## Results (headless, seed 42, mock coordinator, 24 sim-hours)
 
 | KPI | Agentic | Static | Δ |
 |---|---:|---:|---:|
 | People-hours without water | 3,952 | 22,582 | **−82%** |
-| People-hours without food | 4,560 | 56,725 | −92% |
-| On-time deliveries | 94.1% | 92.9% | +1 pt |
-| Deliveries | 17 | 14 | +21% |
+| People-hours without food | 0 | 25 | −100% |
+| On-time deliveries | 87.5% | 93.3% | −6 pt *(worse)* |
+| Deliveries | 16 | 15 | +7% |
 | Truck-hours stuck | 0 | 26.9 | −100% |
-| Avg delivery time | 5h33m | 3h52m | +43% *(worse)* |
-| Supplies delivered | 114.8 t | 94.8 t | +21% |
+| Avg delivery time | 5h55m | 3h43m | +59% *(worse)* |
+| Supplies delivered | 104.7 t | 93.0 t | +13% |
 
-Average delivery time is worse for Agentic on purpose: it accepts long, safe detours and serves far camps the static plan never reaches.
-The live dashboard gives the same picture when the officer approves promptly. In the e2e run, approving every 20 minutes gave −83% people-hours without water.
+Average delivery time is worse for Agentic on purpose: it accepts long, safe detours and serves far camps the static plan
+never reaches. On-time is lower because trucks now carry a balanced load (water, food and medical topped up to the same
+days of cover) instead of water only, so a camp's water can run out before its next truck.
+
+**The walkthrough story** (docs/WALKTHROUGH.md: the officer approves the 06:00 orders at once, Majuli's Assamese report arrives at 16:00 and is
+confirmed, the officer keeps approving) gave: water 37,960 vs 72,048 (−47%), food 0 vs 25, truck-hours stuck 0 vs 26.9,
+supplies 110.7 t vs 93.0 t; on-time 75% vs 87% and average delivery time are worse.
+**Results depend on timing.** Approving the 06:00 orders late, or confirming the Majuli report in the morning (trucks rush to
+Majuli and Morigaon is cut off at 15:30 with too little water), can make RahatNet only slightly better than the static plan
+on water and worse on food. The comparison is computed by code from the run, never edited.
 
 ## Caveats
 - Map tiles (Esri World Dark Gray) need an internet connection. Everything else runs offline with no keys.
 - Road geometry is straight-line between towns (deterministic, so flood tests are reproducible).
 - `DEMO_INJECT_FAULT=true` (off by default) corrupts exactly one coordinator plan per demo run, so the validator's
-  rejection-and-retry is visible on camera. It is labelled "[demo]" in the feed. *(Arrives with the LLM coordinator in Phase 4.)*
+  rejection-and-retry is visible on camera. It is labelled "[demo]" in the feed. It can also be toggled on the officer's Simulation page.
 
 The original plan pack (PRD, architecture, agents, API contract) is in [`docs/`](docs/).

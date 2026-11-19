@@ -173,6 +173,17 @@ async def sim_advance(body: AdvanceBody) -> dict:
     return live.sim_view()
 
 
+class FaultBody(BaseModel):
+    enabled: bool
+
+
+@router.post("/sim/inject-fault", dependencies=OFFICER)
+async def inject_fault(body: FaultBody) -> dict:
+    """Demo tool: corrupt one coordinator plan per demo run so the Validator visibly stops it (next Run Demo)."""
+    get_settings().demo_inject_fault = body.enabled
+    return {"enabled": body.enabled}
+
+
 @router.post("/demo/run", dependencies=OFFICER)
 async def demo_run() -> dict:
     live = get_live()
@@ -458,11 +469,9 @@ async def report() -> dict:
 
 
 @router.get("/report", dependencies=OFFICER)
-async def latest_report() -> dict:
-    live = get_live()
-    if live.report is None:
-        raise HTTPException(404, "no report yet")
-    return live.report
+async def latest_report() -> dict | None:
+    """The latest after-action report, or null before one is written (not a 404: the page asks on every visit)."""
+    return get_live().report
 
 
 @router.get("/kpis", dependencies=OFFICER)

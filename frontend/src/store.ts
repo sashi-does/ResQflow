@@ -1,5 +1,6 @@
+import { toast as sonner } from 'sonner'
 import { create } from 'zustand'
-import type { Health } from './api'
+import type { CampAlert, Health } from './api'
 import type {
   AfterActionReport,
   AgentName,
@@ -68,6 +69,10 @@ interface State {
   setReport: (r: AfterActionReport | null, open?: boolean) => void
   planSeq: number // increments on every plan.started / plan.completed (Agents view pulses on it)
   fieldReports: Record<string, FieldReport>
+  alerts: CampAlert[]
+  pick: { kind: 'camp' | 'truck' | 'warehouse'; id: string } | null
+  setPick: (p: State['pick']) => void
+  clear: () => void
   receipts: Record<string, { received: Supplies; shortfall: Supplies }>
   thinking: boolean
   log: LogEntry[]
@@ -123,6 +128,33 @@ export const useStore = create<State>((set, get) => ({
   reportOpen: false,
   setReport: (report, open = true) => set({ report, reportOpen: open && !!report }),
   fieldReports: {},
+  alerts: [],
+  pick: null,
+  setPick: (pick) => set({ pick }),
+  clear: () =>
+    set({
+      sim: null,
+      trucks: {},
+      camps: {},
+      warehouses: {},
+      hazards: [],
+      blocked: [],
+      orders: {},
+      kpis: null,
+      coordinator: null,
+      policy: null,
+      agents: {},
+      fieldReports: {},
+      alerts: [],
+      receipts: {},
+      log: [],
+      flashes: [],
+      report: null,
+      reportOpen: false,
+      connected: false,
+      everConnected: false,
+      pick: null,
+    }),
   receipts: {},
   thinking: false,
   log: [],
@@ -146,9 +178,10 @@ export const useStore = create<State>((set, get) => ({
     })),
   select: (selected) => set({ selected }),
   toast: (text, tone = 'info') => {
-    const id = seq++
-    set((s) => ({ toasts: [...s.toasts.slice(-3), { id, text, tone }] }))
-    setTimeout(() => get().dismissToast(id), 4000)
+    if (tone === 'ok') sonner.success(text)
+    else if (tone === 'warn') sonner.warning(text)
+    else if (tone === 'error') sonner.error(text)
+    else sonner(text)
   },
   dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
   setDrawing: (drawing) => set({ drawing, drawPoints: [] }),
@@ -164,8 +197,9 @@ export const useStore = create<State>((set, get) => ({
       hazards: snap.hazards,
       blocked: snap.blocked_edge_ids,
       orders: byId(snap.orders),
-      kpis: snap.kpis,
-      coordinator: snap.coordinator,
+      kpis: snap.kpis ?? null,
+      coordinator: snap.coordinator ?? null,
+      alerts: [...(snap.alerts ?? [])].reverse(),
       policy: snap.policy ?? null,
       agents: snap.agents ?? {},
       fieldReports: Object.fromEntries((snap.field_reports ?? []).map((r) => [r.id, r])),
@@ -306,6 +340,11 @@ export const useStore = create<State>((set, get) => ({
       case 'order.updated': {
         const o = m.payload as Order
         set({ orders: { ...s.orders, [o.id]: o } })
+        return
+      }
+      case 'camp.alert': {
+        const a = m.payload as CampAlert
+        set({ alerts: [a, ...s.alerts.filter((x) => x.id !== a.id)] })
         return
       }
       case 'kpis':

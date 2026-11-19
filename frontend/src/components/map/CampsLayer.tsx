@@ -6,6 +6,7 @@ import type { CampDef, Node } from '../../types'
 export function CampsLayer({ camps, nodes }: { camps: CampDef[]; nodes: Map<string, Node> }) {
   const live = useStore((s) => s.camps)
   const selected = useStore((s) => s.selected?.camp_ids)
+  const setPick = useStore((s) => s.setPick)
   return (
     <>
       {camps.map((c) => {
@@ -22,6 +23,7 @@ export function CampsLayer({ camps, nodes }: { camps: CampDef[]; nodes: Map<stri
             radius={radius}
             className={level === 'critical' ? 'camp-critical' : undefined}
             pathOptions={{ color, fillColor: color, fillOpacity: 0.4, weight: 2.5 }}
+            eventHandlers={{ click: () => setPick({ kind: 'camp', id: c.id }) }}
           >
             <Tooltip direction="top" offset={[0, -radius]}>
               <div className="text-xs">

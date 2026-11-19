@@ -68,7 +68,7 @@ def heuristic_plan(
             w_id, truck_id, eta = choice
             truck = world.trucks[truck_id]
             cap = truck.capacity_kg if critical else min(truck.capacity_kg, approval_threshold_kg)
-            items, used_reserve = _load(world, want, avail[w_id], reserve[w_id] if critical else None, cap)
+            items, used_reserve = _load(world, want, avail[w_id], reserve[w_id] if critical else None, cap, st)
             weight = world.weight(items)
             if weight < (MIN_LOAD_CRITICAL_KG if critical else MIN_LOAD_KG):
                 continue
@@ -139,26 +139,44 @@ def _pick_source(
     return None if best is None else (best[1], best[2], best[0])
 
 
+# chunk sizes for balanced loading (about 50-100 kg each)
+CHUNK = {"water_l": 100, "food_rations": 100, "medical_kits": 5}
+
+
 def _load(
     world: WorldState,
     want: dict[str, int],
     avail: Supplies,
     reserve: Supplies | None,
     cap_kg: float,
+    st: CampStatus | None = None,
 ) -> tuple[Supplies, Supplies | None]:
+    """Fill the truck so every item reaches the same days of cover (lowest first), within want/stock/capacity.
+
+    Filling water-first starved camps of food when a big water shortfall (e.g. a confirmed field report doubling a
+    camp) took the whole truck. The safety reserve (water only, critical camps) is used only after free stock.
+    """
     out = dict.fromkeys(ITEMS, 0)
     from_reserve = dict.fromkeys(ITEMS, 0)
     left = cap_kg
-    for i in LOAD_ORDER:
-        uw = world.unit_weight[i]
-        fit = int(left // uw)
-        qty = min(want[i], avail.get(i), fit)
-        if reserve is not None and i == "water_l" and qty < min(want[i], fit):
-            extra = min(min(want[i], fit) - qty, reserve.get(i))
-            from_reserve[i] = extra
-            qty += extra
-        out[i] = qty
-        left -= qty * uw
+    base = {i: (st.stock.get(i) + st.incoming.get(i)) if st else 0 for i in ITEMS}
+    burn = {i: (st.burn_per_day[i] if st else 1) or 1 for i in ITEMS}
+
+    def room(i: str) -> int:
+        free = avail.get(i) - (out[i] - from_reserve[i])
+        res = (reserve.get(i) - from_reserve[i]) if reserve is not None and i == "water_l" else 0
+        return max(0, min(want[i] - out[i], free + res, int(left // world.unit_weight[i])))
+
+    while True:
+        open_items = [i for i in LOAD_ORDER if room(i) > 0]
+        if not open_items:
+            break
+        i = min(open_items, key=lambda x: ((base[x] + out[x]) / burn[x], LOAD_ORDER.index(x)))
+        qty = min(CHUNK[i], room(i))
+        free_left = max(0, avail.get(i) - (out[i] - from_reserve[i]))
+        from_reserve[i] += max(0, qty - free_left)
+        out[i] += qty
+        left -= qty * world.unit_weight[i]
     used = Supplies(**from_reserve)
     return Supplies(**out), (None if used.is_empty() else used)
 

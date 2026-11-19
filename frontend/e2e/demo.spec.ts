@@ -14,6 +14,7 @@ test('demo run: trucks move, flood + re-route flash, approval, KPIs, zero consol
   })
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`))
 
+  await page.request.post('http://localhost:8010/api/sim/reset', { data: { demo_timeline: true } })
   await page.goto('/command')
   await expect(page.getByTestId('sim-time')).toHaveText('D1 06:00')
   await expect(page.locator('.leaflet-interactive').first()).toBeVisible()

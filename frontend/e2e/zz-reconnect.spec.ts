@@ -8,6 +8,7 @@ function killBackend(): void {
   if (pids) execSync(`kill ${pids.split('\n').join(' ')}`)
 }
 
+// Runs last (zz-): it kills the shared test backend and only restores it for its own duration.
 test('UI shows a banner when the backend dies and recovers when it comes back', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', (err) => errors.push(err.message))

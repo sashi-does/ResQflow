@@ -7,6 +7,7 @@ test('intro: cited facts, how it works, roles, one click to the live demo, tour'
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
   page.on('pageerror', (e) => errors.push(e.message))
 
+  await page.request.post('http://localhost:8010/api/sim/reset', { data: { demo_timeline: true } })
   await page.goto('/')
   await expect(page.getByTestId('intro')).toBeVisible()
   const facts = page.locator('figure')

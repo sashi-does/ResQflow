@@ -8,9 +8,9 @@ test('roles: driver alert + ack, Assamese field report + Command confirm, road r
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
   page.on('pageerror', (e) => errors.push(e.message))
 
+  await page.request.post(`${API}/sim/reset`, { data: { demo_timeline: true } })
   await page.goto('/command')
   await expect(page.getByTestId('sim-time')).toHaveText('D1 06:00')
-  await page.request.post(`${API}/sim/reset`, { data: { demo_timeline: true } })
   await page.request.post(`${API}/sim/advance`, { data: { minutes: 76 } }) // past the 07:15 Kaziranga flood
   await expect(page.getByTestId('feed').locator('[data-kind="truck.rerouted"]').first()).toBeVisible()
 

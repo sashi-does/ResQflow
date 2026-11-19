@@ -160,6 +160,7 @@ class Order(BaseModel):
     approval_requested_at_sim: int | None = None
     auto_approve_at_sim: int | None = None  # set when a policy (or a headless run) will approve it if nobody acts
     eta_min: float | None = None
+    loaded_confirmed: bool = False  # warehouse manager pressed "Mark loaded" (doc 11; doesn't change sim timing)
 
 
 class ParsedReport(BaseModel):
@@ -216,6 +217,7 @@ class LogEntry(BaseModel):
     summary: str
     reasoning: str = ""
     refs: LogRefs = Field(default_factory=LogRefs)
+    actor: str | None = None  # the logged-in person behind a human action (doc 11)
 
 
 class KPIs(BaseModel):

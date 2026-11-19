@@ -11,12 +11,14 @@ from fastapi.responses import FileResponse
 
 from app.api.routes import VERSION, router
 from app.api.ws import router as ws_router
+from app.auth.users import seed
 from app.config import STATIC_DIR
 from app.sim.live import get_live
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    seed()  # demo users (bcrypt hashes) into SQLite
     live = get_live()
     if os.environ.get("RAHATNET_NO_LOOP") != "1":
         live.start_background()

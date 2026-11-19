@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from app.agents.types import CheckedOrder, PlanResult
 from app.agents.validator import validate
+from app.auth.context import who
 from app.models import ApprovalPolicy, Order
 from app.sim import engine
 from app.sim.world import WorldState
@@ -131,7 +132,8 @@ class DispatcherAgent:
             world.bus.log(
                 "human",
                 "order.approved",
-                f"Approved by District Officer. Order {order.id} released." + (f' Note: "{note}"' if note else ""),
+                f"Approved by {who('the District Officer')}. Order {order.id} released."
+                + (f' Note: "{note}"' if note else ""),
                 order_ids=[order.id],
                 truck_ids=[order.truck_id],
             )
@@ -147,7 +149,7 @@ class DispatcherAgent:
         world.bus.log(
             "human",
             "order.rejected",
-            f"Rejected by District Officer: order {order.id} to {world.camps[order.camp_id].name}. "
+            f"Rejected by {who('the District Officer')}: order {order.id} to {world.camps[order.camp_id].name}. "
             f"Truck {order.truck_id} released." + (f' Note: "{note}"' if note else ""),
             "The next planning cycle will re-plan without this order.",
             order_ids=[order.id],

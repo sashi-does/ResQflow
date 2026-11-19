@@ -12,6 +12,7 @@ from app.agents.field_intake import FieldIntakeAgent, load_demo_reports  # noqa:
 from app.main import app  # noqa: E402
 from app.models import FieldReport  # noqa: E402
 from app.sim.live import get_live  # noqa: E402
+from tests.auth import H, as_, ws_url  # noqa: E402
 from tests.fake_llm import FakeLLM  # noqa: E402
 
 DEMO = {r["id"]: r for r in load_demo_reports()}
@@ -20,6 +21,7 @@ DEMO = {r["id"]: r for r in load_demo_reports()}
 @pytest.fixture
 def client():
     with TestClient(app) as c:
+        c.headers.update(H())
         c.post("/api/sim/reset", json={"demo_timeline": False})
         yield c
 
@@ -45,7 +47,7 @@ def test_english_demo_report_is_parsed_and_applied_offline(client):
 
 
 def test_assamese_report_with_big_change_waits_for_command(client):
-    r = client.post("/api/camps/C7/reports", json={"text": DEMO["as_majuli"]["text"]}).json()
+    r = client.post("/api/camps/C7/reports", json={"text": DEMO["as_majuli"]["text"]}, headers=H("camp.majuli")).json()
     assert r["status"] == "pending_confirmation"
     assert any("46% change" in x for x in r["reasons"]) and any("drinking water is finished" in x for x in r["reasons"])
     live = get_live()
@@ -58,7 +60,9 @@ def test_assamese_report_with_big_change_waits_for_command(client):
 
 
 def test_unknown_text_in_mock_mode_is_flagged_not_crashed(client):
-    r = client.post("/api/camps/C3/reports", json={"text": "bridge near camp cracked, need tarpaulins"}).json()
+    r = client.post(
+        "/api/camps/C3/reports", json={"text": "bridge near camp cracked, need tarpaulins"}, headers=as_("camp", "C3")
+    ).json()
     assert r["status"] == "unparsed" and "mock mode" in r["reasons"][0]
     assert (
         client.post(f"/api/field-reports/{r['id']}/decision", json={"decision": "reject"}).json()["status"]
@@ -89,7 +93,7 @@ def test_low_confidence_needs_human_and_invalid_output_is_unparsed(world):
 
 
 def test_camp_report_reaches_command_feed_over_ws(client):
-    with client.websocket_connect("/ws") as ws:
+    with client.websocket_connect(ws_url()) as ws:
         ws.receive_json()
         client.post("/api/demo/field-report", json={"report_id": "en_morigaon"})
         m = drain(ws, lambda m: m["type"] == "log" and m["payload"]["kind"] == "field_report.applied")
@@ -103,7 +107,11 @@ def test_delivery_confirmation_with_shortfall(client):
     o = delivered[0]
     before = get_live().world.camps[o["camp_id"]].stock.water_l
     received = dict(o["items"], water_l=max(0, o["items"]["water_l"] - 500))
-    r = client.post(f"/api/camps/{o['camp_id']}/deliveries/{o['id']}/confirm", json={"received": received}).json()
+    r = client.post(
+        f"/api/camps/{o['camp_id']}/deliveries/{o['id']}/confirm",
+        json={"received": received},
+        headers=as_("camp", o["camp_id"]),
+    ).json()
     assert r["shortfall"]["water_l"] == min(500, o["items"]["water_l"])
     assert get_live().world.camps[o["camp_id"]].stock.water_l == max(0, before - r["shortfall"]["water_l"])
     pending = client.get("/api/orders", params={"status": "dispatched"}).json()
@@ -111,7 +119,9 @@ def test_delivery_confirmation_with_shortfall(client):
         p = pending[0]
         assert (
             client.post(
-                f"/api/camps/{p['camp_id']}/deliveries/{p['id']}/confirm", json={"received": p["items"]}
+                f"/api/camps/{p['camp_id']}/deliveries/{p['id']}/confirm",
+                json={"received": p["items"]},
+                headers=as_("camp", p["camp_id"]),
             ).status_code
             == 409
         )
@@ -119,7 +129,9 @@ def test_delivery_confirmation_with_shortfall(client):
 
 # ------------------------------------------------------------------ C2 Driver
 def test_driver_gets_reroute_alert_and_ack_reaches_feed(client):
-    with client.websocket_connect("/ws") as ws:  # connect first: a lone client on a stale paused world gets a clean one
+    with client.websocket_connect(
+        ws_url()
+    ) as ws:  # connect first: a lone client on a stale paused world gets a clean one
         ws.receive_json()
         client.post("/api/sim/advance", json={"minutes": 60})
         client.post("/api/hazards/trigger", json={"preset_id": "F1"})
@@ -129,7 +141,7 @@ def test_driver_gets_reroute_alert_and_ack_reaches_feed(client):
         assert "Dabaka" in alert["message"] and "+" in alert["message"]
         assert any(r["road"].startswith("NH-29") or "NH-129" in r["road"] for r in t3["route_roads"])
         assert t3["job"]["to"] == "Bokakhat Relief Camp"
-        client.post("/api/trucks/T3/ack")
+        client.post("/api/trucks/T3/ack", headers=H("driver.t3"))
         m = drain(ws, lambda m: m["type"] == "log" and m["payload"]["kind"] == "driver.ack")
         assert "acknowledged: Route changed" in m["payload"]["summary"]
     t3 = next(t for t in client.get("/api/state").json()["trucks"] if t["id"] == "T3")
@@ -142,7 +154,9 @@ def test_driver_road_report_is_unverified_until_confirmed_then_reroutes(client):
     live = get_live()
     t3 = live.world.trucks["T3"]
     edge = next(e for e in t3.path_edge_ids if e == "E20")
-    h = client.post("/api/trucks/T1/road-report", json={"edge_id": edge, "kind": "landslide"}).json()
+    h = client.post(
+        "/api/trucks/T1/road-report", json={"edge_id": edge, "kind": "landslide"}, headers=as_("driver", "T1")
+    ).json()
     assert h["verified"] is False and edge not in client.get("/api/state").json()["blocked_edge_ids"]
     assert edge in live.world.trucks["T3"].path_edge_ids  # not re-routed on one report
     client.post(f"/api/hazards/{h['id']}/confirm")
@@ -157,9 +171,13 @@ def test_driver_road_report_is_unverified_until_confirmed_then_reroutes(client):
 
 def test_second_driver_report_verifies(client):
     live = get_live()
-    a = client.post("/api/trucks/T1/road-report", json={"edge_id": "E7", "kind": "waterlogged"}).json()
+    a = client.post(
+        "/api/trucks/T1/road-report", json={"edge_id": "E7", "kind": "waterlogged"}, headers=as_("driver", "T1")
+    ).json()
     assert a["verified"] is False
-    b = client.post("/api/trucks/T2/road-report", json={"edge_id": "E7", "kind": "waterlogged"}).json()
+    b = client.post(
+        "/api/trucks/T2/road-report", json={"edge_id": "E7", "kind": "waterlogged"}, headers=as_("driver", "T2")
+    ).json()
     assert b["id"] == a["id"] and b["verified"] is True
     assert "E7" in live.world.blocked_edge_ids() and "E7" in live.baseline.blocked_edge_ids()
 
@@ -168,6 +186,10 @@ def test_second_driver_report_verifies(client):
 def test_stock_adjustment_applies_to_both_worlds(client):
     live = get_live()
     before = live.world.warehouses["W2"].stock.water_l
-    r = client.post("/api/warehouses/W2/adjust", json={"delta": {"water_l": 20000}, "note": "from State Hub"}).json()
+    r = client.post(
+        "/api/warehouses/W2/adjust",
+        json={"delta": {"water_l": 20000}, "note": "from State Hub"},
+        headers=H("wh.nagaon"),
+    ).json()
     assert r["stock"]["water_l"] == before + 20000
     assert live.baseline.warehouses["W2"].stock.water_l == live.world.warehouses["W2"].stock.water_l

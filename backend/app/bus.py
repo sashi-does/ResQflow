@@ -10,6 +10,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 
+from app.auth.context import current_actor
 from app.models import AgentName, LogEntry, LogRefs
 
 Subscriber = Callable[[str, dict[str, Any]], None]
@@ -78,6 +79,7 @@ class EventBus:
             summary=summary,
             reasoning=reasoning,
             refs=LogRefs(**refs),
+            actor=current_actor.get() if agent == "human" else None,
         )
         self._next_id += 1
         self.entries.append(entry)

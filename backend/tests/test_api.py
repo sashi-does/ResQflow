@@ -9,11 +9,13 @@ os.environ["RAHATNET_NO_LOOP"] = "1"  # tests drive time explicitly with /api/si
 from fastapi.testclient import TestClient  # noqa: E402
 
 from app.main import app  # noqa: E402
+from tests.auth import H, ws_url  # noqa: E402
 
 
 @pytest.fixture
 def client():
     with TestClient(app) as c:
+        c.headers.update(H())
         c.post("/api/sim/reset", json={"demo_timeline": False})
         yield c
 
@@ -29,7 +31,7 @@ def drain_until(ws, wanted: str, limit: int = 3000) -> dict:
 def test_fresh_page_load_starts_clean(client):
     client.post("/api/hazards/trigger", json={"preset_id": "F1"})
     client.post("/api/sim/advance", json={"minutes": 30})
-    with client.websocket_connect("/ws") as ws:  # first client, sim paused -> clean slate
+    with client.websocket_connect(ws_url()) as ws:  # first client, sim paused -> clean slate
         snap = ws.receive_json()["payload"]
     assert snap["hazards"] == [] and snap["log"] == [] and snap["sim"]["sim_time"] == "D1 06:00"
     assert snap["sim"]["running"] is False
@@ -53,7 +55,7 @@ def test_snapshot_shape(client):
 
 
 def test_ws_snapshot_then_events_and_reroute(client):
-    with client.websocket_connect("/ws") as ws:
+    with client.websocket_connect(ws_url()) as ws:
         first = ws.receive_json()
         assert first["type"] == "snapshot"
         # 06:00 plan dispatches T3 Nagaon -> Bokakhat over NH-715; advance to 07:00 (on NH-27, approaching Kaliabor)
@@ -72,7 +74,7 @@ def test_ws_snapshot_then_events_and_reroute(client):
 
 
 def test_tick_and_kpis_messages(client):
-    with client.websocket_connect("/ws") as ws:
+    with client.websocket_connect(ws_url()) as ws:
         ws.receive_json()
         client.post("/api/sim/advance", json={"minutes": 10})
         tick = drain_until(ws, "tick")["payload"]
@@ -82,7 +84,7 @@ def test_tick_and_kpis_messages(client):
 
 
 def test_approve_and_reject_flow(client):
-    with client.websocket_connect("/ws") as ws:
+    with client.websocket_connect(ws_url()) as ws:
         ws.receive_json()
         client.post("/api/sim/advance", json={"minutes": 1})
         awaiting = client.get("/api/orders", params={"status": "awaiting_approval"}).json()
@@ -109,7 +111,10 @@ def test_approve_and_reject_flow(client):
         assert client.post(f"/api/approvals/{second['id']}", json={"decision": "approve"}).status_code == 409
 
     log = client.get("/api/log", params={"limit": 50}).json()
-    assert any(e["agent"] == "human" and "Approved by District Officer" in e["summary"] for e in log)
+    assert any(
+        e["agent"] == "human" and "Approved by Ritu Baruah (District Officer, Nagaon)" in e["summary"] and e["actor"]
+        for e in log
+    )
     assert any(e["agent"] == "human" and "Rejected" in e["summary"] for e in log)
 
 

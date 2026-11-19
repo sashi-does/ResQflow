@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     approval_threshold_kg: int = 6000
     seed: int = 42
     demo_inject_fault: bool = False
+    jwt_secret: str = ""
 
     @property
     def effective_llm_provider(self) -> str:

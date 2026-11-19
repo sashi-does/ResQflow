@@ -1,10 +1,11 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
+from tests.auth import H
 
 
 def test_scenario_endpoint_shape():
-    body = TestClient(app).get("/api/scenario").json()
+    body = TestClient(app).get("/api/scenario", headers=H()).json()
     assert len(body["nodes"]) == 20
     assert len(body["edges"]) == 22
     assert all(len(e["geometry"]) >= 2 for e in body["edges"])

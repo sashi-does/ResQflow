@@ -13,6 +13,7 @@ from app.config import Settings  # noqa: E402
 from app.llm.client import MockClient  # noqa: E402
 from app.main import app  # noqa: E402
 from app.sim.comparison import build_comparison  # noqa: E402
+from tests.auth import H  # noqa: E402
 from tests.fake_llm import FakeLLM  # noqa: E402
 
 
@@ -69,6 +70,7 @@ def test_llm_prose_with_invented_numbers_is_rejected(full_day):
 
 def test_report_endpoint_matches_kpi_strip_and_auto_report_at_end():
     with TestClient(app) as c:
+        c.headers.update(H())
         c.post("/api/sim/reset", json={"demo_timeline": True})
         c.post("/api/sim/advance", json={"minutes": 300})
         r = c.post("/api/report").json()

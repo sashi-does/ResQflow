@@ -17,6 +17,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from app.auth.context import who
 from app.config import DATA_DIR
 from app.llm.client import LLMClient, LLMError, display_name
 from app.llm.prompts import FIELD_INTAKE_SCHEMA, FIELD_INTAKE_SYSTEM
@@ -131,7 +132,7 @@ class FieldIntakeAgent:
         world.bus.log(
             "human",
             "field_report.confirmed",
-            f"Command confirmed the field report from {camp.name}"
+            f"{who('Command')} confirmed the field report from {camp.name}"
             + (f": {', '.join(report.changes)}." if report.changes else "."),
             "A human checked the AI's reading before the numbers changed.",
             camp_ids=[camp.id],
@@ -142,7 +143,10 @@ class FieldIntakeAgent:
         camp = world.camps[report.camp_id]
         report.status = "rejected"
         world.bus.log(
-            "human", "field_report.rejected", f"Command rejected the field report from {camp.name}.", camp_ids=[camp.id]
+            "human",
+            "field_report.rejected",
+            f"{who('Command')} rejected the field report from {camp.name}.",
+            camp_ids=[camp.id],
         )
         return report
 

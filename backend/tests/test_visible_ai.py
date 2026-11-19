@@ -14,6 +14,7 @@ from app.config import Settings  # noqa: E402
 from app.llm.client import MockClient  # noqa: E402
 from app.main import app  # noqa: E402
 from app.sim.comparison import build_comparison  # noqa: E402
+from tests.auth import H  # noqa: E402
 from tests.fake_llm import FakeLLM  # noqa: E402
 
 
@@ -107,6 +108,7 @@ def test_q3_most_at_risk_and_routes(evening):
 
 def test_copilot_endpoint_mock_and_agents_endpoint():
     with TestClient(app) as c:
+        c.headers.update(H())
         c.post("/api/sim/reset", json={"demo_timeline": True})
         c.post("/api/sim/advance", json={"minutes": 90})
         r = c.post("/api/copilot", json={"question": "Why is Morigaon cut off?"}).json()

@@ -14,10 +14,12 @@ from app.agents.inventory import camp_level
 from app.agents.orchestrator import Orchestrator
 from app.agents.report import assemble, build_facts, llm_narrative
 from app.agents.types import CampLevel
+from app.auth.context import who
 from app.config import Settings
 from app.geo.hazards import hazard_from_preset
 from app.llm.client import display_name, make_llm
 from app.models import ApprovalPolicy, Camp, FieldReport, Hazard, Supplies
+from app.sim import alerts as camp_alerts
 from app.sim.clock import ALLOWED_SPEEDS, STEP_S, TICK_REAL_S, SimClock
 from app.sim.comparison import Comparison, build_comparison
 from app.sim.scenario import load_scenario
@@ -61,6 +63,8 @@ class LiveSim:
         self._report_task: asyncio.Task | None = None
         self.receipts: dict[str, dict[str, Any]] = {}
         self.pending_reroute: dict[str, dict[str, Any]] = {}  # truck id -> latest unacknowledged route change
+        self.alerts: list[dict[str, Any]] = []  # camp alerts (doc 11 §3.2), newest last
+        self._alerted: set[tuple[str, str]] = set()
         self.intake = FieldIntakeAgent(self.llm)
         self._last_kpi_bucket = -1
         self.broadcast("snapshot", self.snapshot())
@@ -180,6 +184,38 @@ class LiveSim:
                 "new_eta_sim_seconds": payload.get("new_eta_sim_seconds"),
             }
         self.broadcast(type_, payload)
+        self._maybe_alert(type_, payload)
+
+    def _maybe_alert(self, type_: str, payload: dict[str, Any]) -> None:
+        """Camp alerts on dispatch, re-route (delay) and arrival; text is templated from world numbers."""
+        w = self.world
+        if type_ == "order.updated" and payload.get("status") in ("dispatched", "delivered"):
+            oid, status = payload["id"], payload["status"]
+            if (oid, status) in self._alerted:
+                return
+            self._alerted.add((oid, status))
+            o = w.orders[oid]
+            if status == "dispatched":
+                eta = w.trucks[o.truck_id].eta_sim_seconds
+                text = camp_alerts.dispatch(o.truck_id, o.items, w.fmt(eta) if eta else None)
+                kind = "dispatch"
+            else:
+                text, kind = camp_alerts.arrival(o.truck_id, o.items), "arrival"
+        elif type_ == "truck.rerouted":
+            t = w.trucks[payload["truck_id"]]
+            o = w.orders.get(t.order_id or "")
+            if o is None or o.status != "dispatched" or t.leg != "delivery":
+                return
+            eta = payload.get("new_eta_sim_seconds")
+            text, kind = (
+                camp_alerts.delay(t.id, payload.get("reason", "road closed"), w.fmt(eta) if eta else None),
+                "delay",
+            )
+        else:
+            return
+        alert = camp_alerts.make(len(self.alerts) + 1, o.camp_id, w.sim_time, kind, o.id, o.truck_id, text)
+        self.alerts.append(alert)
+        self.broadcast("camp.alert", alert)
 
     # ------------------------------------------------------------ roles (doc 10 C)
     def new_field_report(self, camp_id: str, text: str, origin: str = "camp") -> FieldReport:
@@ -257,12 +293,15 @@ class LiveSim:
         pending = self.pending_reroute.pop(truck_id, None)
         what = pending["message"] if pending else "its current route"
         self.world.bus.log(
-            "human", "driver.ack", f"Driver of Truck {truck_id} acknowledged: {what}", truck_ids=[truck_id]
+            "human",
+            "driver.ack",
+            f"{who(f'The driver of Truck {truck_id}')} acknowledged: {what}",
+            truck_ids=[truck_id],
         )
         self.broadcast("truck.ack", {"truck_id": truck_id, "sim_time": self.world.sim_time})
         return {"ok": True}
 
-    def road_report(self, truck_id: str, edge_id: str, kind: str) -> Hazard:
+    def road_report(self, truck_id: str, edge_id: str, kind: str, note: str = "") -> Hazard:
         w = self.world
         e = w.graph.edges[edge_id]
         road = e.road.split(" (")[0]
@@ -295,7 +334,8 @@ class LiveSim:
             "monitor",
             "hazard.unverified",
             f"Unverified report from the driver of Truck {truck_id}: {kind} on {road} between "
-            f"{w.node_name(e.a)} and {w.node_name(e.b)}. Not closing the road yet.",
+            f"{w.node_name(e.a)} and {w.node_name(e.b)}. Not closing the road yet."
+            + (f' Driver\'s note: "{note}"' if note else ""),
             "One report isn't enough to close a highway. It needs a second source or Command's confirmation; "
             "then every "
             "truck using that road is re-routed.",
@@ -306,13 +346,52 @@ class LiveSim:
         w.bus.publish("hazard.added", {"hazard": hazard.model_dump(), "blocked_edge_ids": sorted(w.blocked_edge_ids())})
         return hazard
 
+    def mark_loaded(self, order_id: str) -> dict[str, Any]:
+        """Warehouse manager confirms the truck is loaded. Logged for accountability; sim timing is unchanged."""
+        w = self.world
+        o = w.orders[order_id]
+        if not o.loaded_confirmed:
+            o.loaded_confirmed = True
+            w.bus.log(
+                "human",
+                "order.loaded",
+                f"{who('The warehouse manager')} confirmed Truck {o.truck_id} loaded at "
+                f"{w.warehouses[o.warehouse_id].name} for {w.camps[o.camp_id].name}: {fmt_items(o.items)}.",
+                order_ids=[o.id],
+                truck_ids=[o.truck_id],
+            )
+            w.bus.publish("order.updated", o.model_dump())
+        return o.model_dump()
+
+    def truck_history(self, truck_id: str) -> list[dict[str, Any]]:
+        """Completed trips for the driver's History page (numbers from the world and the KPI tracker)."""
+        w = self.world
+        out = []
+        for o in w.orders.values():
+            if o.truck_id != truck_id or o.status != "delivered" or o.delivered_at_sim is None:
+                continue
+            out.append(
+                {
+                    "order_id": o.id,
+                    "warehouse": w.warehouses[o.warehouse_id].name,
+                    "camp": w.camps[o.camp_id].name,
+                    "items": o.items.as_dict(),
+                    "weight_kg": o.weight_kg,
+                    "dispatched": w.fmt(o.created_at_sim),
+                    "delivered": w.fmt(o.delivered_at_sim),
+                    "minutes": round((o.delivered_at_sim - o.created_at_sim) / 60),
+                    "on_time": o.id not in w.kpi.late_order_ids,
+                }
+            )
+        return sorted(out, key=lambda r: r["delivered"], reverse=True)
+
     def confirm_hazard(self, hazard_id: str) -> Hazard:
         h = self.world.hazards[hazard_id]
         if not h.verified:
             self.world.bus.log(
                 "human",
                 "hazard.confirmed",
-                f"Command confirmed: {h.label}. Closing the road.",
+                f"{who('Command')} confirmed: {h.label}. Closing the road.",
                 hazard_ids=[h.id],
                 edge_ids=list(h.edge_ids),
             )
@@ -337,7 +416,8 @@ class LiveSim:
         self.world.bus.log(
             "human",
             "stock.adjusted",
-            f"{wh.name} warehouse stock adjusted: {fmt_signed(delta)}." + (f' Note: "{note}"' if note else ""),
+            f"{wh.name} warehouse stock adjusted by {who('the warehouse manager')}: {fmt_signed(delta)}."
+            + (f' Note: "{note}"' if note else ""),
             "Applied to both runs (same ground truth); the coordinator re-plans with the new availability.",
         )
         self.orch.request(f"stock adjusted at {wh.name}")
@@ -352,7 +432,7 @@ class LiveSim:
             w.bus.log(
                 "human",
                 "delivery.confirmed",
-                f"{camp.name} confirmed delivery {order_id} received in full.",
+                f"{who(camp.name)} confirmed delivery {order_id} received in full.",
                 camp_ids=[camp_id],
                 order_ids=[order_id],
             )
@@ -361,7 +441,7 @@ class LiveSim:
             w.bus.log(
                 "human",
                 "delivery.shortfall",
-                f"{camp.name} confirmed delivery {order_id} but it was short: {fmt_items(shortfall)} missing. "
+                f"{who(camp.name)} confirmed delivery {order_id} but it was short: {fmt_items(shortfall)} missing. "
                 "Camp stock corrected and flagged to Command.",
                 "The coordinator will plan the missing amount in its next cycle.",
                 camp_ids=[camp_id],
@@ -574,6 +654,7 @@ class LiveSim:
             "field_reports": [r.model_dump() for r in self.field_reports.values()],
             "agents": self.agents_view(),
             "receipts": self.receipts,
+            "alerts": self.alerts[-100:],
             "log": [e.model_dump() for e in w.bus.entries[-200:]],
         }
 

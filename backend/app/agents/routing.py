@@ -150,6 +150,7 @@ class RoutingAgent:
             hazard_ids=[hazard.id],
             edge_ids=hit,
             order_ids=[t.order_id] if t.order_id else [],
+            camp_ids=[world.orders[t.order_id].camp_id] if t.order_id in world.orders else [],
         )
         delta = opt.minutes - old_min
         self._publish(

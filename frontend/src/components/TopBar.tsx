@@ -1,9 +1,11 @@
 import { api } from '../api'
+import { navigate } from '../router'
+import { RoleSwitcher } from './RoleSwitcher'
 import { useStore } from '../store'
 
 const SPEEDS = [30, 120, 600]
 
-export function TopBar() {
+export function TopBar({ onTour }: { onTour?: () => void }) {
   const sim = useStore((s) => s.sim)
   const health = useStore((s) => s.health)
   const scenario = useStore((s) => s.scenario)
@@ -16,7 +18,9 @@ export function TopBar() {
 
   return (
     <header className="flex h-12 shrink-0 items-center gap-3 border-b border-slate-800 bg-slate-950 px-4">
-      <span className="text-[15px] font-semibold tracking-tight text-white">RahatNet</span>
+      <button className="text-[15px] font-semibold tracking-tight text-white" onClick={() => navigate('/')}>
+        RahatNet
+      </button>
       <span className="text-slate-600">▸</span>
       <span className="text-sm text-slate-300">{scenario?.name ?? 'Assam Floods'}</span>
       <span className="ml-2 rounded bg-slate-800 px-2 py-0.5 font-mono text-sm tabular-nums text-sky-300" data-testid="sim-time">
@@ -55,6 +59,12 @@ export function TopBar() {
         ))}
       </div>
       <div className="ml-auto flex items-center gap-3">
+        <RoleSwitcher />
+        {onTour && (
+          <button className="btn-chip" onClick={onTour} data-testid="tour-button">
+            Tour
+          </button>
+        )}
         <span className="flex items-center gap-1.5 text-xs text-slate-300" title={health?.llm_model}>
           <span className={`h-2 w-2 rounded-full ${offline ? 'bg-amber-400' : 'bg-emerald-400'}`} />
           Coordinator: {offline ? 'offline mode (heuristic)' : `${provider} · ${health?.llm_model ?? ''}`}

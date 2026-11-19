@@ -4,8 +4,9 @@ import { PRESET_BUTTONS } from './lib/presets'
 import { awaitingApproval, useStore } from './store'
 
 /** Space = play/pause, 1-4 = trigger floods, A = approve the top approval card. */
-export function useKeyboardShortcuts(): void {
+export function useKeyboardShortcuts(enabled = true): void {
   useEffect(() => {
+    if (!enabled) return
     const onKey = (ev: KeyboardEvent) => {
       const target = ev.target as HTMLElement | null
       if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return
@@ -38,5 +39,5 @@ export function useKeyboardShortcuts(): void {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [enabled])
 }

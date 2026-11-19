@@ -180,3 +180,19 @@ def test_speed_start_pause_and_demo_run(client):
     client.post("/api/sim/pause")
     k = client.get("/api/kpis").json()
     assert set(k) == {"agentic", "baseline", "delta_pct"}
+
+
+def test_spa_routes_serve_index_html(client, tmp_path, monkeypatch):
+    import app.main as main
+
+    (tmp_path / "assets").mkdir()
+    (tmp_path / "index.html").write_text("<html>rahatnet</html>")
+    (tmp_path / "assets" / "app.js").write_text("console.log(1)")
+    monkeypatch.setattr(main, "STATIC_DIR", tmp_path)
+    for path in ("/", "/command", "/camp/C7", "/driver/T3"):
+        r = client.get(path)
+        assert r.status_code == 200 and "rahatnet" in r.text
+    assert client.get("/assets/app.js").text == "console.log(1)"
+    assert client.get("/../../etc/passwd").status_code in (200, 404)  # never escapes the static dir
+    assert "root:" not in client.get("/../../etc/passwd").text
+    assert client.get("/api/nope").status_code == 404

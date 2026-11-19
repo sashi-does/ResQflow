@@ -6,8 +6,8 @@ import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 
 from app.api.routes import VERSION, router
 from app.api.ws import router as ws_router
@@ -28,5 +28,17 @@ app = FastAPI(title="RahatNet", version=VERSION, lifespan=lifespan)
 app.include_router(router)
 app.include_router(ws_router)
 
-if STATIC_DIR.exists():
-    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="frontend")
+
+@app.get("/{path:path}", include_in_schema=False)
+async def spa(path: str) -> FileResponse:
+    """Built frontend: real files as-is, every app route (/, /command, /camp/C7, …) gets index.html."""
+    if path.startswith(("api/", "ws")):
+        raise HTTPException(404)
+    root = STATIC_DIR.resolve()
+    target = (root / path).resolve()
+    if path and target.is_file() and root in target.parents:
+        return FileResponse(target)
+    index = root / "index.html"
+    if not index.exists():
+        raise HTTPException(404, "frontend not built: run `make build`")
+    return FileResponse(index)

@@ -60,3 +60,9 @@ def describe_route(town_names: list[str], roads: list[str]) -> str:
         via = ", ".join(towns[:-1]) + " and " + towns[-1]
     toks = road_tokens(roads)
     return f"{via} ({', '.join(toks)})" if via else ", ".join(toks)
+
+
+def fmt_signed(delta) -> str:  # noqa: ANN001 - Supplies
+    names = {"water_l": "L water", "food_rations": "food rations", "medical_kits": "medical kits"}
+    parts = [f"{v:+,} {names[k]}" for k, v in delta.as_dict().items() if v]
+    return ", ".join(parts) or "no change"

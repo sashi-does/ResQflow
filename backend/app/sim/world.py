@@ -83,7 +83,8 @@ class WorldState:
     def blocked_edge_ids(self) -> set[str]:
         out: set[str] = set()
         for h in self.hazards.values():
-            out.update(h.edge_ids)
+            if h.verified and h.kind != "rain_advisory":
+                out.update(h.edge_ids)
         return out
 
     def routing_blocked(self) -> set[str]:

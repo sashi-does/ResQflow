@@ -6,7 +6,9 @@ import { TopBar } from './components/TopBar'
 import { useKeyboardShortcuts } from './hooks'
 import { Command } from './pages/Command'
 import { Intro } from './pages/Intro'
-import { Placeholder } from './pages/Placeholder'
+import { CampView } from './pages/CampView'
+import { DriverView } from './pages/DriverView'
+import { WarehouseView } from './pages/WarehouseView'
 import { parseRoute, usePath } from './router'
 import { useStore } from './store'
 import { useLiveSocket } from './ws'
@@ -46,9 +48,9 @@ export default function App() {
     <div className="flex h-full flex-col">
       <TopBar onTour={route.page === 'command' ? () => setTouring(true) : undefined} />
       {route.page === 'command' && <Command />}
-      {route.page === 'camp' && <Placeholder title={`Camp ${route.id}`} />}
-      {route.page === 'driver' && <Placeholder title={`Driver ${route.id}`} />}
-      {route.page === 'warehouse' && <Placeholder title={`Warehouse ${route.id}`} />}
+      {route.page === 'camp' && <CampView campId={route.id} />}
+      {route.page === 'driver' && <DriverView truckId={route.id} />}
+      {route.page === 'warehouse' && <WarehouseView warehouseId={route.id} />}
       {touring && <Tour onClose={() => setTouring(false)} />}
       <Toasts />
     </div>

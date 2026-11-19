@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
+from app.agents.field_intake import load_demo_reports
 from app.config import get_settings
 from app.geo.hazards import hazard_from_preset
-from app.models import ApprovalPolicy
+from app.models import ApprovalPolicy, Supplies
 from app.sim.live import get_live
 from app.sim.scenario import load_scenario
 
@@ -141,6 +143,7 @@ async def hazards_trigger(body: TriggerBody) -> dict:
     if body.preset_id not in live.world.scenario.presets:
         raise HTTPException(404, f"unknown preset {body.preset_id}")
     hazard = live.trigger_preset(body.preset_id)
+    live.touch()
     if hazard is None:
         existing = next(h for h in live.world.hazards.values() if h.preset_id == body.preset_id)
         return existing.model_dump()
@@ -184,9 +187,9 @@ async def approvals(order_id: str, body: ApprovalBody) -> dict:
         raise HTTPException(404, f"unknown order {order_id}")
     if order.status != "awaiting_approval":
         raise HTTPException(409, f"order {order_id} is {order.status}, not awaiting approval")
-    if body.decision == "approve":
-        return live.approve(order_id, body.note)
-    return live.reject(order_id, body.note)
+    out = live.approve(order_id, body.note) if body.decision == "approve" else live.reject(order_id, body.note)
+    live.touch()
+    return out
 
 
 @router.get("/log")
@@ -204,6 +207,134 @@ async def get_policy() -> dict:
 @router.post("/policy")
 async def set_policy(body: ApprovalPolicy) -> dict:
     return get_live().set_policy(body).model_dump()
+
+
+class ReportBody(BaseModel):
+    text: str
+    source: Literal["camp", "demo"] = "camp"
+
+
+class DecisionBody(BaseModel):
+    decision: Literal["confirm", "reject"]
+
+
+class DemoReportBody(BaseModel):
+    report_id: str
+
+
+class RoadReportBody(BaseModel):
+    edge_id: str
+    kind: Literal["waterlogged", "blocked", "landslide"]
+
+
+class AdjustBody(BaseModel):
+    delta: Supplies
+    note: str = ""
+
+
+class ReceiptBody(BaseModel):
+    received: Supplies
+
+
+async def _submit_report(camp_id: str, text: str, origin: str) -> dict:
+    live = get_live()
+    if camp_id not in live.world.camps:
+        raise HTTPException(404, f"unknown camp {camp_id}")
+    if not text.strip():
+        raise HTTPException(422, "empty report")
+    report = live.new_field_report(camp_id, text[:2000], origin)
+    name, pop, water_days = live.parse_inputs(camp_id)
+    outcome = await asyncio.to_thread(live.intake.parse, name, pop, water_days, report.text)  # LLM off the loop
+    out = live.finish_field_report(report, outcome).model_dump()
+    live.touch()
+    return out
+
+
+@router.post("/camps/{camp_id}/reports")
+async def camp_report(camp_id: str, body: ReportBody) -> dict:
+    return await _submit_report(camp_id, body.text, body.source)
+
+
+@router.get("/field-reports")
+async def field_reports(status: str | None = None) -> list[dict]:
+    reports = get_live().field_reports.values()
+    return [r.model_dump() for r in reports if status is None or r.status == status]
+
+
+@router.post("/field-reports/{report_id}/decision")
+async def field_report_decision(report_id: str, body: DecisionBody) -> dict:
+    live = get_live()
+    if report_id not in live.field_reports:
+        raise HTTPException(404, f"unknown report {report_id}")
+    out = live.decide_field_report(report_id, body.decision).model_dump()
+    live.touch()
+    return out
+
+
+@router.get("/demo/reports")
+async def demo_reports() -> list[dict]:
+    return [{k: v for k, v in r.items() if k != "recorded"} for r in load_demo_reports()]
+
+
+@router.post("/demo/field-report")
+async def demo_field_report(body: DemoReportBody) -> dict:
+    rep = next((r for r in load_demo_reports() if r["id"] == body.report_id), None)
+    if rep is None:
+        raise HTTPException(404, f"unknown demo report {body.report_id}")
+    return await _submit_report(rep["camp_id"], rep["text"], "demo")
+
+
+@router.post("/camps/{camp_id}/deliveries/{order_id}/confirm")
+async def confirm_delivery(camp_id: str, order_id: str, body: ReceiptBody) -> dict:
+    live = get_live()
+    order = live.world.orders.get(order_id)
+    if order is None or order.camp_id != camp_id:
+        raise HTTPException(404, f"no order {order_id} for camp {camp_id}")
+    if order.status != "delivered":
+        raise HTTPException(409, f"order {order_id} is {order.status}, not delivered")
+    out = live.confirm_delivery(camp_id, order_id, body.received)
+    live.touch()
+    return out
+
+
+@router.post("/trucks/{truck_id}/ack")
+async def truck_ack(truck_id: str) -> dict:
+    live = get_live()
+    if truck_id not in live.world.trucks:
+        raise HTTPException(404, f"unknown truck {truck_id}")
+    out = live.acknowledge(truck_id)
+    live.touch()
+    return out
+
+
+@router.post("/trucks/{truck_id}/road-report")
+async def road_report(truck_id: str, body: RoadReportBody) -> dict:
+    live = get_live()
+    if truck_id not in live.world.trucks or body.edge_id not in live.world.graph.edges:
+        raise HTTPException(404, "unknown truck or road")
+    out = live.road_report(truck_id, body.edge_id, body.kind).model_dump()
+    live.touch()
+    return out
+
+
+@router.post("/hazards/{hazard_id}/confirm")
+async def hazard_confirm(hazard_id: str) -> dict:
+    live = get_live()
+    if hazard_id not in live.world.hazards:
+        raise HTTPException(404, f"no active hazard {hazard_id}")
+    out = live.confirm_hazard(hazard_id).model_dump()
+    live.touch()
+    return out
+
+
+@router.post("/warehouses/{warehouse_id}/adjust")
+async def warehouse_adjust(warehouse_id: str, body: AdjustBody) -> dict:
+    live = get_live()
+    if warehouse_id not in live.world.warehouses:
+        raise HTTPException(404, f"unknown warehouse {warehouse_id}")
+    out = live.adjust_stock(warehouse_id, body.delta, body.note)
+    live.touch()
+    return out
 
 
 @router.get("/kpis")

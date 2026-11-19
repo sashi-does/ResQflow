@@ -9,17 +9,19 @@ from typing import Any
 
 from shapely.geometry import LineString, shape
 
+from app.agents.field_intake import FieldIntakeAgent, ParseOutcome
 from app.agents.inventory import camp_level
 from app.agents.orchestrator import Orchestrator
 from app.agents.types import CampLevel
 from app.config import Settings
 from app.geo.hazards import hazard_from_preset
 from app.llm.client import display_name, make_llm
-from app.models import ApprovalPolicy, Camp, Hazard
+from app.models import ApprovalPolicy, Camp, FieldReport, Hazard, Supplies
 from app.sim.clock import ALLOWED_SPEEDS, STEP_S, TICK_REAL_S, SimClock
 from app.sim.comparison import Comparison, build_comparison
 from app.sim.scenario import load_scenario
 from app.sim.world import WorldState
+from app.text import fmt_items, fmt_signed
 
 log = logging.getLogger(__name__)
 KPI_EVERY_S = 300  # broadcast KPIs every 5 sim-min
@@ -53,6 +55,10 @@ class LiveSim:
         self.clock.running = False
         self.clock.reset()
         self._hazard_map: dict[str, str] = {}  # agentic hazard id -> baseline hazard id
+        self.field_reports: dict[str, FieldReport] = {}
+        self.receipts: dict[str, dict[str, Any]] = {}
+        self.pending_reroute: dict[str, dict[str, Any]] = {}  # truck id -> latest unacknowledged route change
+        self.intake = FieldIntakeAgent(self.llm)
         self._last_kpi_bucket = -1
         self.broadcast("snapshot", self.snapshot())
 
@@ -138,7 +144,191 @@ class LiveSim:
                 self.clients.discard(q)
 
     def _on_event(self, type_: str, payload: dict[str, Any]) -> None:
+        if type_ == "truck.rerouted":
+            self.pending_reroute[payload["truck_id"]] = {
+                "message": payload.get("message", ""),
+                "at": self.world.sim_time,
+                "new_eta_sim_seconds": payload.get("new_eta_sim_seconds"),
+            }
         self.broadcast(type_, payload)
+
+    # ------------------------------------------------------------ roles (doc 10 C)
+    def new_field_report(self, camp_id: str, text: str, origin: str = "camp") -> FieldReport:
+        w = self.world
+        report = FieldReport(
+            id=f"R-{len(self.field_reports) + 1}",
+            camp_id=camp_id,
+            text=text.strip(),
+            sim_time=w.sim_time,
+            sim_seconds=w.sim_seconds,
+            origin=origin,  # type: ignore[arg-type]
+        )
+        self.field_reports[report.id] = report
+        camp = w.camps[camp_id]
+        w.bus.log(
+            "field_intake",
+            "field_report.received",
+            f"Field report received from {camp.name}.",
+            f'"{report.text}"',
+            camp_ids=[camp_id],
+        )
+        self.broadcast("field_report.created", report.model_dump())
+        return report
+
+    def parse_inputs(self, camp_id: str) -> tuple[str, int, float]:
+        camp = self.world.camps[camp_id]
+        return camp.name, camp.population, self.world.water_days(camp)
+
+    def finish_field_report(self, report: FieldReport, outcome: ParseOutcome) -> FieldReport:
+        if report.id not in self.field_reports:  # the world was reset while the AI was reading
+            return report
+        self.intake.apply(self.world, report, outcome)
+        if report.status == "applied":
+            self._mirror_report_to_baseline(report)
+            self.orch.request(f"field report from {self.world.camps[report.camp_id].name}")
+        self.broadcast("field_report.updated", report.model_dump())
+        return report
+
+    def decide_field_report(self, report_id: str, decision: str) -> FieldReport:
+        report = self.field_reports[report_id]
+        if report.status not in ("pending_confirmation", "unparsed"):
+            return report
+        if decision == "confirm":
+            self.intake.confirm(self.world, report)
+            self._mirror_report_to_baseline(report)
+            self.orch.request(f"confirmed field report from {self.world.camps[report.camp_id].name}")
+        else:
+            self.intake.reject(self.world, report)
+        self.broadcast("field_report.updated", report.model_dump())
+        return report
+
+    def _mirror_report_to_baseline(self, report: FieldReport) -> None:
+        """Ground truth (more people, empty stock) is the same in both worlds, so the comparison stays fair."""
+        if report.parsed is None:
+            return
+        self.intake._apply_numbers(self.baseline, self.baseline.camps[report.camp_id], report.parsed)
+
+    def touch(self) -> None:
+        """Push current state to every role view now (ticks only flow while the sim runs)."""
+        self.broadcast("tick", self.tick_payload())
+
+    def acknowledge(self, truck_id: str) -> dict[str, Any]:
+        pending = self.pending_reroute.pop(truck_id, None)
+        what = pending["message"] if pending else "its current route"
+        self.world.bus.log(
+            "human", "driver.ack", f"Driver of Truck {truck_id} acknowledged: {what}", truck_ids=[truck_id]
+        )
+        self.broadcast("truck.ack", {"truck_id": truck_id, "sim_time": self.world.sim_time})
+        return {"ok": True}
+
+    def road_report(self, truck_id: str, edge_id: str, kind: str) -> Hazard:
+        w = self.world
+        e = w.graph.edges[edge_id]
+        road = e.road.split(" (")[0]
+        for h in w.hazards.values():  # a second report on the same road verifies it
+            if h.kind == "driver_report" and edge_id in h.edge_ids and not h.verified and truck_id not in h.reported_by:
+                h.reported_by.append(truck_id)
+                w.bus.log(
+                    "monitor",
+                    "hazard.second_source",
+                    f"Second report of {kind} on {road} (Truck {truck_id}): treating it as verified.",
+                    truck_ids=[truck_id],
+                    hazard_ids=[h.id],
+                    edge_ids=[edge_id],
+                )
+                self._verify(h)
+                return h
+        hazard = Hazard(
+            id=w.new_hazard_id(),
+            label=f"{kind.capitalize()} on {road} (driver report)",
+            kind="driver_report",
+            edge_ids=[edge_id],
+            severity="medium",
+            created_at_sim=w.sim_seconds,
+            verified=False,
+            source="driver",
+            reported_by=[truck_id],
+        )
+        w.add_hazard(hazard)
+        w.bus.log(
+            "monitor",
+            "hazard.unverified",
+            f"Unverified report from the driver of Truck {truck_id}: {kind} on {road} between "
+            f"{w.node_name(e.a)} and {w.node_name(e.b)}. Not closing the road yet.",
+            "One report isn't enough to close a highway. It needs a second source or Command's confirmation; "
+            "then every "
+            "truck using that road is re-routed.",
+            truck_ids=[truck_id],
+            hazard_ids=[hazard.id],
+            edge_ids=[edge_id],
+        )
+        w.bus.publish("hazard.added", {"hazard": hazard.model_dump(), "blocked_edge_ids": sorted(w.blocked_edge_ids())})
+        return hazard
+
+    def confirm_hazard(self, hazard_id: str) -> Hazard:
+        h = self.world.hazards[hazard_id]
+        if not h.verified:
+            self.world.bus.log(
+                "human",
+                "hazard.confirmed",
+                f"Command confirmed: {h.label}. Closing the road.",
+                hazard_ids=[h.id],
+                edge_ids=list(h.edge_ids),
+            )
+            self._verify(h)
+        return h
+
+    def _verify(self, h: Hazard) -> None:
+        w = self.world
+        h.verified = True
+        w.bus.publish("hazard.updated", {"hazard": h.model_dump(), "blocked_edge_ids": sorted(w.blocked_edge_ids())})
+        self.orch.routing.on_hazard_added(w, h)
+        self.orch.request(f"road closure confirmed: {h.label}")
+        bh = h.model_copy(update={"id": self.baseline.new_hazard_id()})
+        self.baseline.add_hazard(bh)
+        self._hazard_map[h.id] = bh.id
+
+    def adjust_stock(self, warehouse_id: str, delta: Supplies, note: str) -> dict[str, Any]:
+        for world in (self.world, self.baseline):
+            wh = world.warehouses[warehouse_id]
+            wh.stock = (wh.stock + delta).clamp0()
+        wh = self.world.warehouses[warehouse_id]
+        self.world.bus.log(
+            "human",
+            "stock.adjusted",
+            f"{wh.name} warehouse stock adjusted: {fmt_signed(delta)}." + (f' Note: "{note}"' if note else ""),
+            "Applied to both runs (same ground truth); the coordinator re-plans with the new availability.",
+        )
+        self.orch.request(f"stock adjusted at {wh.name}")
+        return self.warehouse_view(warehouse_id)
+
+    def confirm_delivery(self, camp_id: str, order_id: str, received: Supplies) -> dict[str, Any]:
+        w = self.world
+        order = w.orders[order_id]
+        camp = w.camps[camp_id]
+        shortfall = (order.items - received).clamp0()
+        if shortfall.is_empty():
+            w.bus.log(
+                "human",
+                "delivery.confirmed",
+                f"{camp.name} confirmed delivery {order_id} received in full.",
+                camp_ids=[camp_id],
+                order_ids=[order_id],
+            )
+        else:
+            camp.stock = (camp.stock - shortfall).clamp0()  # the sim credited the full load; correct the record
+            w.bus.log(
+                "human",
+                "delivery.shortfall",
+                f"{camp.name} confirmed delivery {order_id} but it was short: {fmt_items(shortfall)} missing. "
+                "Camp stock corrected and flagged to Command.",
+                "The coordinator will plan the missing amount in its next cycle.",
+                camp_ids=[camp_id],
+                order_ids=[order_id],
+            )
+            self.orch.request(f"delivery shortfall at {camp.name}")
+        self.receipts[order_id] = {"received": received.as_dict(), "shortfall": shortfall.as_dict()}
+        return {"ok": True, "shortfall": shortfall.as_dict()}
 
     # ------------------------------------------------------------ actions
     def trigger_preset(self, preset_id: str) -> Hazard | None:
@@ -236,6 +426,9 @@ class LiveSim:
             "cut_off": camp.cut_off,
             "unserved_reason": camp.unserved_reason,
             "priority_boost": camp.priority_boost,
+            "population": camp.population,
+            "urgent_needs": list(camp.urgent_needs),
+            "health_flags": list(camp.health_flags),
         }
 
     def warehouse_view(self, wid: str) -> dict[str, Any]:
@@ -245,6 +438,39 @@ class LiveSim:
             "stock": w.stock.as_dict(),
             "available": self.world.available(w).as_dict(),
             "reserve": self.world.reserve_held(w).as_dict(),
+        }
+
+    def route_roads(self, tid: str) -> list[dict[str, Any]]:
+        t = self.world.trucks[tid]
+        g = self.world.graph
+        out = []
+        for i, eid in enumerate(t.path_edge_ids):
+            e = g.edges[eid]
+            out.append(
+                {
+                    "edge_id": eid,
+                    "road": e.road,
+                    "from": g.nodes[t.path_nodes[i]].name,
+                    "to": g.nodes[t.path_nodes[i + 1]].name,
+                    "km": round(e.length_km),
+                    "blocked": eid in self.world.blocked_edge_ids(),
+                }
+            )
+        return out
+
+    def job_view(self, tid: str) -> dict[str, Any] | None:
+        t = self.world.trucks[tid]
+        order = self.world.orders.get(t.order_id or "")
+        if order is None:
+            return None
+        return {
+            "order_id": order.id,
+            "status": order.status,
+            "from": self.world.warehouses[order.warehouse_id].name,
+            "to": self.world.camps[order.camp_id].name,
+            "camp_id": order.camp_id,
+            "items": order.items.as_dict(),
+            "weight_kg": order.weight_kg,
         }
 
     def truck_view(self, tid: str) -> dict[str, Any]:
@@ -262,6 +488,9 @@ class LiveSim:
             "eta_sim_seconds": t.eta_sim_seconds,
             "heading_to": order.camp_id if order and t.leg == "delivery" else t.destination_node,
             "leg": t.leg,
+            "route_roads": self.route_roads(t.id),
+            "pending_reroute": self.pending_reroute.get(t.id),
+            "job": self.job_view(t.id),
         }
 
     def sim_view(self) -> dict[str, Any]:
@@ -301,6 +530,8 @@ class LiveSim:
             "kpis": self.cmp.kpis(),
             "coordinator": self.coordinator_view(),
             "policy": self.policy.model_dump(),
+            "field_reports": [r.model_dump() for r in self.field_reports.values()],
+            "receipts": self.receipts,
             "log": [e.model_dump() for e in w.bus.entries[-200:]],
         }
 
@@ -312,10 +543,7 @@ class LiveSim:
             "running": self.clock.running,
             "speed": self.clock.speed,
             "ended": self.cmp.agentic.ended,
-            "trucks": [
-                {"id": t.id, "lat": t.position.lat, "lon": t.position.lon, "status": t.status}
-                for t in w.trucks.values()
-            ],
+            "trucks": [self.truck_view(t) for t in sorted(w.trucks)],  # full views: role pages are live from WS
             "camps": [self.camp_view(c) for c in w.camps.values()],
             "warehouses": [self.warehouse_view(x) for x in sorted(w.warehouses)],
         }

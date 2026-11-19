@@ -3,6 +3,8 @@ import type { Health } from './api'
 import type {
   AgentName,
   ApprovalPolicy,
+  FieldReport,
+  Supplies,
   CampView,
   CoordinatorView,
   Hazard,
@@ -58,6 +60,8 @@ interface State {
   kpis: KpiBundle | null
   coordinator: CoordinatorView | null
   policy: ApprovalPolicy | null
+  fieldReports: Record<string, FieldReport>
+  receipts: Record<string, { received: Supplies; shortfall: Supplies }>
   thinking: boolean
   log: LogEntry[]
   flashes: Flash[]
@@ -106,6 +110,8 @@ export const useStore = create<State>((set, get) => ({
   kpis: null,
   coordinator: null,
   policy: null,
+  fieldReports: {},
+  receipts: {},
   thinking: false,
   log: [],
   flashes: [],
@@ -149,6 +155,8 @@ export const useStore = create<State>((set, get) => ({
       kpis: snap.kpis,
       coordinator: snap.coordinator,
       policy: snap.policy ?? null,
+      fieldReports: Object.fromEntries((snap.field_reports ?? []).map((r) => [r.id, r])),
+      receipts: snap.receipts ?? {},
       thinking: false,
       log: [...(snap.log ?? [])].reverse().slice(0, LOG_CAP),
       flashes: [],
@@ -189,6 +197,17 @@ export const useStore = create<State>((set, get) => ({
       case 'hazard.added': {
         const p = m.payload as { hazard: Hazard; blocked_edge_ids: string[] }
         set({ hazards: [...s.hazards.filter((h) => h.id !== p.hazard.id), p.hazard], blocked: p.blocked_edge_ids })
+        return
+      }
+      case 'hazard.updated': {
+        const p = m.payload as { hazard: Hazard; blocked_edge_ids: string[] }
+        set({ hazards: s.hazards.map((h) => (h.id === p.hazard.id ? p.hazard : h)), blocked: p.blocked_edge_ids })
+        return
+      }
+      case 'field_report.created':
+      case 'field_report.updated': {
+        const r = m.payload as FieldReport
+        set({ fieldReports: { ...s.fieldReports, [r.id]: r } })
         return
       }
       case 'hazard.removed': {

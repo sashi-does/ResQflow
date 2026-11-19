@@ -1,0 +1,35 @@
+[
+  {
+    "id": "en_morigaon",
+    "camp_id": "C2",
+    "lang": "en",
+    "label": "Morigaon (English)",
+    "text": "300 more families came from Laharighat, total now ~6,000. ORS and baby food finished. Two fever cases.",
+    "recorded": {
+      "population_delta": null,
+      "new_population": 6000,
+      "shortages": [],
+      "urgent_needs": ["ORS (oral rehydration salts)", "baby food"],
+      "health_flags": ["2 fever cases"],
+      "confidence": 0.86,
+      "needs_human_check": false
+    }
+  },
+  {
+    "id": "as_majuli",
+    "camp_id": "C7",
+    "lang": "as",
+    "label": "Majuli (Assamese)",
+    "text": "কমলাবাৰীৰ পৰা আৰু ২৫০টা পৰিয়াল আহি পাইছে, এতিয়া শিবিৰত প্ৰায় ৭,০০০ জন মানুহ। খোৱা পানী প্ৰায় শেষ হৈছে। শিশুৰ বাবে গাখীৰৰ গুড়ি নাই। তিনিজন বয়স্ক লোকৰ ডায়েৰিয়া হৈছে।",
+    "translation": "250 more families have arrived from Kamalabari; there are now about 7,000 people in the camp. Drinking water is almost finished. No milk powder for the children. Three elderly people have diarrhoea.",
+    "recorded": {
+      "population_delta": null,
+      "new_population": 7000,
+      "shortages": ["water_l"],
+      "urgent_needs": ["milk powder for children"],
+      "health_flags": ["3 elderly people with diarrhoea"],
+      "confidence": 0.82,
+      "needs_human_check": false
+    }
+  }
+]

@@ -8,7 +8,12 @@ export function RightPanel() {
   const tab = useStore((s) => s.tab)
   const setTab = useStore((s) => s.setTab)
   const orders = useStore((s) => s.orders)
-  const pending = awaitingApproval(orders).length
+  const reports = useStore((s) => s.fieldReports)
+  const hazards = useStore((s) => s.hazards)
+  const pending =
+    awaitingApproval(orders).length +
+    Object.values(reports).filter((r) => r.status === 'pending_confirmation' || r.status === 'unparsed').length +
+    hazards.filter((h) => h.verified === false).length
   const tabs: { id: Tab; label: string }[] = [
     { id: 'feed', label: 'Agent Feed' },
     { id: 'approvals', label: 'Approvals' },

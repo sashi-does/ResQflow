@@ -1,6 +1,7 @@
 import type { AgentName, CampLevel, Supplies, TruckStatus } from '../types'
 
 export const AGENT_COLORS: Record<AgentName, string> = {
+  field_intake: '#ec4899',
   monitor: '#0ea5e9',
   inventory: '#a855f7',
   routing: '#f59e0b',
@@ -12,6 +13,7 @@ export const AGENT_COLORS: Record<AgentName, string> = {
 }
 
 export const AGENT_LABEL: Record<AgentName, string> = {
+  field_intake: 'Field Intake',
   monitor: 'Monitor',
   inventory: 'Inventory',
   routing: 'Routing',

@@ -3,7 +3,7 @@ import { AGENT_COLORS, AGENT_LABEL } from '../lib/format'
 import { useStore } from '../store'
 import type { AgentName, LogEntry } from '../types'
 
-const AGENTS: AgentName[] = ['monitor', 'inventory', 'routing', 'coordinator', 'validator', 'dispatcher', 'human']
+const AGENTS: AgentName[] = ['field_intake', 'monitor', 'inventory', 'routing', 'coordinator', 'validator', 'dispatcher', 'human']
 
 function Entry({ e, fresh }: { e: LogEntry; fresh: boolean }) {
   const [open, setOpen] = useState(false)

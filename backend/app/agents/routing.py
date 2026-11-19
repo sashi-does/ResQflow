@@ -84,7 +84,14 @@ class RoutingAgent:
             and (opt is None or opt.minutes > CANCEL_REPOSITION_FACTOR * old_min + 60)
         ):
             self._cancel_reposition(world, t, road, hazard, opt.minutes if opt else None)
-            self._publish(world, t, old_coords, old_min, f"{road} flooded")
+            self._publish(
+                world,
+                t,
+                old_coords,
+                old_min,
+                f"{road} flooded",
+                f"Job cancelled. {road.split(' (')[0]} is flooded. Return to the nearest warehouse for a new job.",
+            )
             return
         if opt is None:
             self._hold_safely(world, t, blocked)
@@ -97,7 +104,14 @@ class RoutingAgent:
                 hazard_ids=[hazard.id],
                 edge_ids=hit,
             )
-            self._publish(world, t, old_coords, old_min, f"{road} flooded")
+            self._publish(
+                world,
+                t,
+                old_coords,
+                old_min,
+                f"{road} flooded",
+                f"Stop at the next safe point. {road.split(' (')[0]} is flooded and there is no other safe road.",
+            )
             return
         same_route = opt.edge_ids == t.path_edge_ids and not opt.via_turnback
         engine.apply_route(
@@ -137,7 +151,17 @@ class RoutingAgent:
             edge_ids=hit,
             order_ids=[t.order_id] if t.order_id else [],
         )
-        self._publish(world, t, old_coords, old_min, f"{road} flooded")
+        delta = opt.minutes - old_min
+        self._publish(
+            world,
+            t,
+            old_coords,
+            old_min,
+            f"{road} flooded",
+            f"Route changed. {road.split(' (')[0]} flooded near {self._near(world, hit[0])}. "
+            f"New route via {describe_route(towns, opt.roads)}. "
+            + (f"+{fmt_duration(delta)}." if delta > 1 else "Same arrival time."),
+        )
 
     def _cancel_reposition(self, world: WorldState, t: Truck, road: str, hazard: Hazard, new_min: float | None) -> None:
         order = world.orders[t.order_id or ""]
@@ -207,7 +231,15 @@ class RoutingAgent:
                 hazard_ids=[hazard.id],
                 edge_ids=list(hazard.edge_ids),
             )
-            self._publish(world, t, old_coords, current, f"{reopened} reopened")
+            self._publish(
+                world,
+                t,
+                old_coords,
+                current,
+                f"{reopened} reopened",
+                f"Road reopened: {reopened}. Switch back to the faster route, "
+                f"{fmt_duration(current - opt.minutes)} quicker.",
+            )
             changed.append(t.id)
         return changed
 
@@ -358,11 +390,14 @@ class RoutingAgent:
             return f"({w} → {c})"
         return "(returning to base)"
 
-    def _publish(self, world: WorldState, t: Truck, old_coords: list, old_min: float, reason: str) -> None:
+    def _publish(
+        self, world: WorldState, t: Truck, old_coords: list, old_min: float, reason: str, message: str = ""
+    ) -> None:
         world.bus.publish(
             "truck.rerouted",
             {
                 "truck_id": t.id,
+                "message": message or f"Route changed: {reason}.",
                 "old_path_coords": old_coords,
                 "new_path_coords": world.truck_path_coords(t),
                 "reason": reason,

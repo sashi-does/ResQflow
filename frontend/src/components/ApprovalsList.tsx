@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { api } from '../api'
 import { fmtDuration, fmtItems, fmtKg, shortName } from '../lib/format'
 import { awaitingApproval, useStore } from '../store'
+import { AttentionList } from './AttentionList'
 import { PolicyPanel } from './PolicyPanel'
 import type { Order } from '../types'
 
@@ -94,6 +95,7 @@ export function ApprovalsList() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
     <PolicyPanel />
+    <AttentionList />
     <div className="min-h-0 flex-1 overflow-y-auto p-3">
       {list.length === 0 ? (
         <p className="px-2 py-10 text-center text-sm text-slate-500">

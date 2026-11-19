@@ -69,6 +69,24 @@ export function DemoControls() {
           Replan
         </button>
         <span className="mx-1 h-4 w-px bg-slate-700" />
+        <span className="px-1 text-xs text-slate-400">Field report:</span>
+        <button
+          className="btn-chip"
+          disabled={!connected}
+          data-testid="demo-report-en"
+          onClick={() => api.sendDemoReport('en_morigaon').then((r) => toast(`Morigaon report: ${r.status.replace('_', ' ')}`, 'info'), (e: unknown) => toast(String(e), 'error'))}
+        >
+          Morigaon (EN)
+        </button>
+        <button
+          className="btn-chip"
+          disabled={!connected}
+          data-testid="demo-report-as"
+          onClick={() => api.sendDemoReport('as_majuli').then((r) => toast(`Majuli report: ${r.status.replace('_', ' ')}`, 'info'), (e: unknown) => toast(String(e), 'error'))}
+        >
+          Majuli (অসমীয়া)
+        </button>
+        <span className="mx-1 h-4 w-px bg-slate-700" />
         {drawing ? (
           <>
             <span className="px-1 text-xs text-sky-300">Click the map to outline the flood…</span>

@@ -1,4 +1,16 @@
-import type { ApprovalPolicy, Hazard, KpiBundle, Order, Scenario, SimView, Snapshot } from './types'
+import type {
+  ApprovalPolicy,
+  DemoReport,
+  FieldReport,
+  Hazard,
+  KpiBundle,
+  Order,
+  Scenario,
+  SimView,
+  Snapshot,
+  Supplies,
+  WarehouseView,
+} from './types'
 
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
   const r = await fetch(`/api${path}`, {
@@ -50,4 +62,18 @@ export const api = {
     req<Order>('POST', `/approvals/${orderId}`, { decision, note }),
   kpis: () => req<KpiBundle>('GET', '/kpis'),
   setPolicy: (p: ApprovalPolicy) => req<ApprovalPolicy>('POST', '/policy', p),
+  sendReport: (campId: string, text: string) => req<FieldReport>('POST', `/camps/${campId}/reports`, { text }),
+  decideReport: (id: string, decision: 'confirm' | 'reject') =>
+    req<FieldReport>('POST', `/field-reports/${id}/decision`, { decision }),
+  demoReports: () => req<DemoReport[]>('GET', '/demo/reports'),
+  sendDemoReport: (report_id: string) => req<FieldReport>('POST', '/demo/field-report', { report_id }),
+  confirmDelivery: (campId: string, orderId: string, received: Supplies) =>
+    req<{ ok: boolean; shortfall: Supplies }>('POST', `/camps/${campId}/deliveries/${orderId}/confirm`, { received }),
+  ack: (truckId: string) => req<{ ok: boolean }>('POST', `/trucks/${truckId}/ack`),
+  roadReport: (truckId: string, edge_id: string, kind: string) =>
+    req<Hazard>('POST', `/trucks/${truckId}/road-report`, { edge_id, kind }),
+  confirmHazard: (id: string) => req<Hazard>('POST', `/hazards/${id}/confirm`),
+  adjustStock: (warehouseId: string, delta: Partial<Supplies>, note: string) =>
+    req<WarehouseView>('POST', `/warehouses/${warehouseId}/adjust`, { delta, note }),
+  ordersAll: () => req<Order[]>('GET', '/orders'),
 }

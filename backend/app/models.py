@@ -12,8 +12,10 @@ NodeKind = Literal["town", "junction", "ghat"]
 EdgeKind = Literal["nh", "sh", "local", "ferry"]
 TruckStatus = Literal["idle", "loading", "en_route", "unloading", "returning", "holding"]
 OrderStatus = Literal["proposed", "awaiting_approval", "dispatched", "delivered", "rejected", "failed"]
-HazardKind = Literal["flood", "edge_closure", "rain_advisory"]
-AgentName = Literal["monitor", "inventory", "routing", "coordinator", "validator", "dispatcher", "human", "system"]
+HazardKind = Literal["flood", "edge_closure", "rain_advisory", "driver_report"]
+AgentName = Literal[
+    "field_intake", "monitor", "inventory", "routing", "coordinator", "validator", "dispatcher", "human", "system"
+]
 
 
 class Supplies(BaseModel):
@@ -92,6 +94,8 @@ class Camp(BaseModel):
     priority_boost: int = 0
     cut_off: bool = False
     unserved_reason: str | None = None
+    urgent_needs: list[str] = Field(default_factory=list)  # from field reports (items the system doesn't stock)
+    health_flags: list[str] = Field(default_factory=list)
 
 
 class Position(BaseModel):
@@ -133,6 +137,9 @@ class Hazard(BaseModel):
     preset_id: str | None = None
     district: str | None = None
     rain_24h_mm: float | None = None
+    verified: bool = True  # unverified hazards (single driver report) never block roads
+    source: Literal["preset", "custom", "driver", "weather"] = "preset"
+    reported_by: list[str] = Field(default_factory=list)
 
 
 class Order(BaseModel):
@@ -153,6 +160,34 @@ class Order(BaseModel):
     approval_requested_at_sim: int | None = None
     auto_approve_at_sim: int | None = None  # set when a policy (or a headless run) will approve it if nobody acts
     eta_min: float | None = None
+
+
+class ParsedReport(BaseModel):
+    """Structured output of the Field Intake agent (validated before anything is applied)."""
+
+    population_delta: int | None = None
+    new_population: int | None = Field(None, ge=0, le=200_000)
+    shortages: list[Literal["water_l", "food_rations", "medical_kits"]] = Field(default_factory=list)
+    urgent_needs: list[str] = Field(default_factory=list)
+    health_flags: list[str] = Field(default_factory=list)
+    confidence: float = Field(..., ge=0, le=1)
+    needs_human_check: bool = False
+
+
+class FieldReport(BaseModel):
+    id: str
+    camp_id: str
+    text: str
+    sim_time: str
+    sim_seconds: int
+    parsed: ParsedReport | None = None
+    status: Literal["processing", "applied", "pending_confirmation", "unparsed", "rejected", "confirmed"] = "processing"
+    reasons: list[str] = Field(default_factory=list)
+    changes: list[str] = Field(default_factory=list)  # human-readable effects, e.g. "population 4,800 → 7,000"
+    source: Literal["llm", "recorded", "none"] = "none"
+    model: str | None = None
+    latency_ms: int | None = None
+    origin: Literal["camp", "demo"] = "camp"
 
 
 class ApprovalPolicy(BaseModel):

@@ -70,6 +70,7 @@ export interface Scenario {
 export type TruckStatus = 'idle' | 'loading' | 'en_route' | 'unloading' | 'returning' | 'holding'
 export type CampLevel = 'critical' | 'low' | 'ok'
 export type AgentName =
+  | 'field_intake'
   | 'monitor'
   | 'inventory'
   | 'routing'
@@ -99,6 +100,29 @@ export interface TruckView {
   cargo?: Supplies
   eta_sim_seconds?: number | null
   heading_to?: string | null
+  leg?: string | null
+  route_roads?: RouteRoad[]
+  pending_reroute?: { message: string; at: string; new_eta_sim_seconds: number | null } | null
+  job?: Job | null
+}
+
+export interface RouteRoad {
+  edge_id: string
+  road: string
+  from: string
+  to: string
+  km: number
+  blocked: boolean
+}
+
+export interface Job {
+  order_id: string
+  status: string
+  from: string
+  to: string
+  camp_id: string
+  items: Supplies
+  weight_kg: number
 }
 
 export interface CampView {
@@ -111,6 +135,44 @@ export interface CampView {
   cut_off: boolean
   unserved_reason: string | null
   priority_boost?: number
+  population?: number
+  urgent_needs?: string[]
+  health_flags?: string[]
+}
+
+export interface ParsedReport {
+  population_delta: number | null
+  new_population: number | null
+  shortages: ('water_l' | 'food_rations' | 'medical_kits')[]
+  urgent_needs: string[]
+  health_flags: string[]
+  confidence: number
+  needs_human_check: boolean
+}
+
+export interface FieldReport {
+  id: string
+  camp_id: string
+  text: string
+  sim_time: string
+  sim_seconds: number
+  parsed: ParsedReport | null
+  status: 'processing' | 'applied' | 'pending_confirmation' | 'unparsed' | 'rejected' | 'confirmed'
+  reasons: string[]
+  changes: string[]
+  source: 'llm' | 'recorded' | 'none'
+  model: string | null
+  latency_ms: number | null
+  origin: 'camp' | 'demo'
+}
+
+export interface DemoReport {
+  id: string
+  camp_id: string
+  lang: string
+  label: string
+  text: string
+  translation?: string
 }
 
 export interface WarehouseView {
@@ -130,6 +192,9 @@ export interface Hazard {
   preset_id: string | null
   district?: string | null
   rain_24h_mm?: number | null
+  verified?: boolean
+  source?: string
+  reported_by?: string[]
 }
 
 export type OrderStatus = 'proposed' | 'awaiting_approval' | 'dispatched' | 'delivered' | 'rejected' | 'failed'
@@ -215,6 +280,8 @@ export interface Snapshot {
   kpis: KpiBundle
   coordinator: CoordinatorView
   policy?: ApprovalPolicy
+  field_reports?: FieldReport[]
+  receipts?: Record<string, { received: Supplies; shortfall: Supplies }>
   log?: LogEntry[]
 }
 

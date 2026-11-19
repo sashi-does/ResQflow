@@ -65,3 +65,49 @@ PLAN_SCHEMA = {
     "required": ["orders", "unserved", "summary"],
     "additionalProperties": False,
 }
+
+FIELD_INTAKE_SYSTEM = """You are the Field Intake agent in RahatNet, a flood-relief system in Assam, India.
+A relief-camp coordinator sends a short free-text report, in English or Assamese. Turn it into structured data.
+
+Rules:
+- new_population: the camp's total headcount, only if the report states a total
+  (e.g. "total now ~6,000"). Otherwise null.
+- population_delta: a change in PEOPLE only if the report states a number of people. Families are not people: if only
+  families are given, leave population_delta null (do not convert).
+- shortages: only these known items, when the report says they are finished or almost finished:
+  water_l (drinking water), food_rations (food, rice, rations), medical_kits (medicines, first-aid kits).
+- urgent_needs: anything else the camp needs (ORS, baby food, milk powder, tarpaulins...), as short English phrases.
+- health_flags: illness or injuries mentioned, as short English phrases with the number of people if given.
+- Write every list item in English, even when the report is in Assamese.
+- confidence: 0 to 1, how sure you are of the extraction.
+- needs_human_check: true if the report is ambiguous, contradictory or alarming (deaths, outbreaks).
+Never invent numbers that are not in the report."""
+
+_NULLABLE_INT = {"anyOf": [{"type": "integer"}, {"type": "null"}]}
+_STR_LIST = {"type": "array", "items": {"type": "string"}}
+
+FIELD_INTAKE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "population_delta": _NULLABLE_INT,
+        "new_population": _NULLABLE_INT,
+        "shortages": {
+            "type": "array",
+            "items": {"type": "string", "enum": ["water_l", "food_rations", "medical_kits"]},
+        },
+        "urgent_needs": _STR_LIST,
+        "health_flags": _STR_LIST,
+        "confidence": {"type": "number"},
+        "needs_human_check": {"type": "boolean"},
+    },
+    "required": [
+        "population_delta",
+        "new_population",
+        "shortages",
+        "urgent_needs",
+        "health_flags",
+        "confidence",
+        "needs_human_check",
+    ],
+    "additionalProperties": False,
+}

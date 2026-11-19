@@ -11,7 +11,12 @@ from app.text import fmt_days
 
 CRITICAL_DAYS = 0.5
 LOW_DAYS = 1.0
-HYSTERESIS = 0.1  # leave a level only after recovering this far past its threshold (stops flapping)
+HYSTERESIS = 0.1  # log messages only: leave a level after recovering this far past it (stops log flapping)
+
+
+def camp_level(days_of_cover: float) -> CampLevel:
+    """The single threshold function for camp status (backend status, UI colour, planner)."""
+    return "critical" if days_of_cover < CRITICAL_DAYS else "low" if days_of_cover < LOW_DAYS else "ok"
 
 
 class InventoryAgent:
@@ -26,7 +31,7 @@ class InventoryAgent:
         incoming = world.incoming(camp.id)
         doc = world.days_of_cover(camp)
         deficit = Supplies(**{i: max(0, math.ceil(burn[i] * 1.0 - camp.stock.get(i) - incoming.get(i))) for i in ITEMS})
-        level: CampLevel = "critical" if doc < CRITICAL_DAYS else "low" if doc < LOW_DAYS else "ok"
+        level = camp_level(doc)
         score = (1 / max(doc, 0.05)) * (1 + camp.priority_boost) * math.log10(max(camp.population, 10))
         if reachable is None:
             reachable = self.reachable(world, camp)

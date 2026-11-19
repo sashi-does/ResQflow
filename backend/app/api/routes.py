@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from app.config import get_settings
 from app.geo.hazards import hazard_from_preset
+from app.models import ApprovalPolicy
 from app.sim.live import get_live
 from app.sim.scenario import load_scenario
 
@@ -75,7 +76,7 @@ async def scenario() -> dict:
         "camps": sc.raw["camps"],
         "trucks": sc.raw["trucks"],
         "presets": presets,
-        "constants": sc.constants,
+        "constants": sc.constants | {"status_thresholds": {"critical_below_days": 0.5, "low_below_days": 1.0}},
         "timeline": sc.raw["timeline"],
     }
 
@@ -193,6 +194,16 @@ async def log_entries(limit: int = Query(200, ge=1, le=2000), agent: str | None 
     entries = get_live().world.bus.entries
     picked = [e for e in reversed(entries) if agent is None or e.agent == agent]
     return [e.model_dump() for e in picked[:limit]]
+
+
+@router.get("/policy")
+async def get_policy() -> dict:
+    return get_live().policy.model_dump()
+
+
+@router.post("/policy")
+async def set_policy(body: ApprovalPolicy) -> dict:
+    return get_live().set_policy(body).model_dump()
 
 
 @router.get("/kpis")

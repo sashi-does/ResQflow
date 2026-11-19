@@ -11,7 +11,7 @@ test('keyboard shortcuts, drawn flood, sitrep: zero console errors', async ({ pa
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`))
 
   await page.request.post(`${API}/sim/reset`, { data: { demo_timeline: true } })
-  await page.goto('/')
+  await page.goto('/command')
   await expect(page.getByTestId('sim-time')).toHaveText('D1 06:00')
 
   // Space = play, Space = pause

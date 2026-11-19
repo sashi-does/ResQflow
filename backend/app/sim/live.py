@@ -9,11 +9,12 @@ from typing import Any
 
 from shapely.geometry import LineString, shape
 
+from app.agents.inventory import camp_level
 from app.agents.orchestrator import Orchestrator
 from app.agents.types import CampLevel
 from app.config import Settings
 from app.geo.hazards import hazard_from_preset
-from app.models import Camp, Hazard
+from app.models import ApprovalPolicy, Camp, Hazard
 from app.sim.clock import ALLOWED_SPEEDS, STEP_S, TICK_REAL_S, SimClock
 from app.sim.comparison import Comparison, build_comparison
 from app.sim.scenario import load_scenario
@@ -32,6 +33,7 @@ class LiveSim:
         self.clock = SimClock(speed=settings.sim_speed if settings.sim_speed in ALLOWED_SPEEDS else 120)
         self.clients: set[asyncio.Queue] = set()
         self.demo_timeline = True
+        self.policy = ApprovalPolicy()
         self._task: asyncio.Task | None = None
         self._ticks = 0
         self.reset(demo_timeline=True)
@@ -39,7 +41,9 @@ class LiveSim:
     # ------------------------------------------------------------ lifecycle
     def reset(self, demo_timeline: bool = True) -> None:
         self.demo_timeline = demo_timeline
-        self.cmp: Comparison = build_comparison(self.settings, timeline=demo_timeline, headless=False)
+        self.cmp: Comparison = build_comparison(
+            self.settings, timeline=demo_timeline, headless=False, policy=self.policy
+        )
         self.world.bus.subscribe(self._on_event)
         self.clock.running = False
         self.clock.reset()
@@ -101,6 +105,21 @@ class LiveSim:
         q: asyncio.Queue = asyncio.Queue(maxsize=5000)
         self.clients.add(q)
         return q
+
+    def fresh_session_reset(self) -> bool:
+        """A page load with nobody else connected and the sim not running starts clean (doc 10 A1)."""
+        if self.clients or self.clock.running:
+            return False
+        if self.world.sim_seconds == 0 and not self.world.hazards and not self.world.bus.entries:
+            return False  # already pristine
+        self.reset(demo_timeline=True)
+        return True
+
+    def set_policy(self, policy: ApprovalPolicy) -> ApprovalPolicy:
+        self.policy = policy
+        self.orch.dispatcher.set_policy(self.world, policy)
+        self.broadcast("policy.updated", policy.model_dump())
+        return policy
 
     def unsubscribe(self, q: asyncio.Queue) -> None:
         self.clients.discard(q)
@@ -197,10 +216,7 @@ class LiveSim:
 
     # ------------------------------------------------------------ views
     def camp_level(self, camp: Camp) -> CampLevel:
-        level = self.orch.inventory.level(camp.id)
-        if level is None:
-            level = self.orch.inventory.camp_status(self.world, camp, reachable=not camp.cut_off).status
-        return level
+        return camp_level(self.world.days_of_cover(camp))
 
     def camp_view(self, camp: Camp) -> dict[str, Any]:
         w = self.world
@@ -276,6 +292,7 @@ class LiveSim:
             "orders": active,
             "kpis": self.cmp.kpis(),
             "coordinator": self.coordinator_view(),
+            "policy": self.policy.model_dump(),
             "log": [e.model_dump() for e in w.bus.entries[-200:]],
         }
 

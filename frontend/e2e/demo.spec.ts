@@ -14,14 +14,20 @@ test('demo run: trucks move, flood + re-route flash, approval, KPIs, zero consol
   })
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`))
 
-  await page.goto('/')
+  await page.goto('/command')
   await expect(page.getByTestId('sim-time')).toHaveText('D1 06:00')
   await expect(page.locator('.leaflet-interactive').first()).toBeVisible()
+  await expect(page.getByTestId('legend')).toBeVisible()
+  // keep approval cards on screen long enough to photograph them (policy countdown 2 h)
+  await page.request.post('http://localhost:8010/api/policy', {
+    data: { auto_approve_critical: true, max_tonnes: 8, delay_min: 120 },
+  })
 
   // 600x: one sim-hour every 6 s
   await page.getByRole('button', { name: '600x' }).click()
   await page.getByTestId('run-demo').click()
   await expect(page.getByTestId('feed').locator('[data-kind="order.dispatched"]').first()).toBeVisible()
+  await expect(page.getByTestId('kpi-collecting').first()).toBeVisible() // no misleading early deltas
 
   // 1. normal run: trucks on the road
   await expect.poll(() => simTime(page), { timeout: 20_000 }).toMatch(/D1 06:[3-5]\d/)
@@ -64,6 +70,7 @@ test('demo run: trucks move, flood + re-route flash, approval, KPIs, zero consol
   await page.getByTestId('tab-approvals').click()
   const card = page.getByTestId('approval-card').first()
   await expect(card).toBeVisible()
+  await expect(card.getByTestId('approval-countdown')).toContainText('Auto-approves in')
   await page.screenshot({ path: `${SHOTS}/03-approval-card.png` })
   await card.getByRole('button', { name: 'Approve' }).click()
   await expect(page.getByText(/Order approved\. T\d dispatched\./)).toBeVisible()
@@ -92,6 +99,7 @@ test('demo run: trucks move, flood + re-route flash, approval, KPIs, zero consol
     await page.waitForTimeout(7000) // let the 07:15 flash and toasts expire (6.5 s / 4 s)
     await expect(page.locator('.flash-new')).toHaveCount(0)
     await expect(page.getByTestId('kpi-strip')).toBeVisible()
+    await expect(page.getByTestId('kpi-collecting')).toHaveCount(0)
     await page.screenshot({ path: `${SHOTS}/04-kpi-strip.png` })
     const k = (await (await page.request.get(`${api}/kpis`)).json()) as {
       agentic: { people_hours_without_water: number }
@@ -101,5 +109,8 @@ test('demo run: trucks move, flood + re-route flash, approval, KPIs, zero consol
     expect(k.agentic.people_hours_without_water).toBeLessThanOrEqual(0.7 * k.baseline.people_hours_without_water)
   }
 
+  await page.request.post('http://localhost:8010/api/policy', {
+    data: { auto_approve_critical: true, max_tonnes: 8, delay_min: 20 },
+  })
   expect(errors, errors.join('\n')).toEqual([])
 })

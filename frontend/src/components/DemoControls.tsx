@@ -33,7 +33,7 @@ export function DemoControls() {
       .catch((e: unknown) => toast(String(e), 'error'))
 
   return (
-    <div className="absolute bottom-3 left-3 z-[1000] rounded-lg border border-slate-700 bg-slate-900/90 p-2 shadow-xl backdrop-blur">
+    <div className="absolute bottom-3 left-3 z-[1000] max-w-[calc(100%-17.5rem)] rounded-lg border border-slate-700 bg-slate-900/90 p-2 shadow-xl backdrop-blur">
       <div className="mb-1 px-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Demo controls</div>
       <div className="flex flex-wrap items-center gap-1">
         <span className="px-1 text-xs text-slate-400">Trigger flood:</span>

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from app.agents.types import CheckedOrder, PlanResult
 from app.agents.validator import validate
-from app.models import Order
+from app.models import ApprovalPolicy, Order
 from app.sim import engine
 from app.sim.world import WorldState
 from app.text import fmt_duration, fmt_items, fmt_kg
@@ -17,9 +17,50 @@ class DispatcherAgent:
     `auto_approve_after_s` is set only for headless and baseline runs (never in the live UI).
     """
 
-    def __init__(self, approval_threshold_kg: float, auto_approve_after_s: int | None = None) -> None:
+    def __init__(
+        self,
+        approval_threshold_kg: float,
+        auto_approve_after_s: int | None = None,
+        policy: ApprovalPolicy | None = None,
+    ) -> None:
         self.threshold = approval_threshold_kg
         self.auto_approve_after_s = auto_approve_after_s
+        self.policy = policy  # live mode only: Command's approval policy
+
+    def policy_eligible(self, order: Order) -> bool:
+        p = self.policy
+        return bool(
+            p
+            and p.auto_approve_critical
+            and order.priority == "critical"
+            and not order.uses_reserve
+            and order.weight_kg <= p.max_tonnes * 1000 + 1e-6
+        )
+
+    def _auto_time(self, order: Order) -> int | None:
+        if order.approval_requested_at_sim is None:
+            return None
+        if self.auto_approve_after_s is not None:  # headless / baseline stand-in for the officer
+            return order.approval_requested_at_sim + self.auto_approve_after_s
+        if self.policy_eligible(order):
+            return order.approval_requested_at_sim + (self.policy.delay_min if self.policy else 0) * 60
+        return None
+
+    def set_policy(self, world: WorldState, policy: ApprovalPolicy) -> None:
+        """Change the policy and re-time every waiting order."""
+        self.policy = policy
+        for o in world.orders.values():
+            if o.status == "awaiting_approval":
+                o.auto_approve_at_sim = self._auto_time(o)
+                world.bus.publish("order.updated", o.model_dump())
+        state = "on" if policy.auto_approve_critical else "off"
+        world.bus.log(
+            "human",
+            "policy.updated",
+            f"Approval policy updated: auto-approve critical orders up to {policy.max_tonnes:g} t after "
+            f"{policy.delay_min} min is {state}.",
+            "Orders that draw on a warehouse's safety reserve always need a human decision.",
+        )
 
     def execute(self, world: WorldState, result: PlanResult) -> list[Order]:
         if not result.validation.ok:
@@ -66,15 +107,25 @@ class DispatcherAgent:
             )
             world.bus.publish("order.updated", order.model_dump())
             return order
-        if auto:
+        if auto and self.auto_approve_after_s is not None:
             world.bus.log(
                 "dispatcher",
                 "order.approved",
-                f"Auto-approved order {order.id} (headless run) after "
-                f"{fmt_duration(self.auto_approve_after_s / 60 if self.auto_approve_after_s else 0)}.",
+                f"Auto-approved order {order.id} (headless run) after {fmt_duration(self.auto_approve_after_s / 60)}.",
                 "Headless and baseline runs stand in for the district officer. "
-                "In the live dashboard a human must click.",
+                "In the live dashboard the Command approval policy or a human decides.",
                 order_ids=[order.id],
+            )
+        elif auto:
+            p = self.policy or ApprovalPolicy()
+            world.bus.log(
+                "dispatcher",
+                "order.approved",
+                f"Auto-approved order {order.id} under the Command policy (critical, up to {p.max_tonnes:g} t): "
+                f"nobody objected within {p.delay_min} min.",
+                "The camp is critical, so waiting longer would cost water. Command can change this policy at any time.",
+                order_ids=[order.id],
+                truck_ids=[order.truck_id],
             )
         else:
             world.bus.log(
@@ -106,13 +157,11 @@ class DispatcherAgent:
         return order
 
     def auto_approve(self, world: WorldState) -> None:
-        if self.auto_approve_after_s is None:
-            return
         for order in sorted(world.orders.values(), key=lambda o: o.id):
             if (
                 order.status == "awaiting_approval"
-                and order.approval_requested_at_sim is not None
-                and world.sim_seconds - order.approval_requested_at_sim >= self.auto_approve_after_s
+                and order.auto_approve_at_sim is not None
+                and world.sim_seconds >= order.auto_approve_at_sim
             ):
                 self.approve(world, order.id, auto=True)
 
@@ -163,6 +212,7 @@ class DispatcherAgent:
             order.status = "awaiting_approval"
             order.approval_reasons = reasons
             order.approval_requested_at_sim = world.sim_seconds
+            order.auto_approve_at_sim = self._auto_time(order)
             world.trucks[order.truck_id].order_id = order.id  # reserve the truck
             world.bus.log(
                 "dispatcher",

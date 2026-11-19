@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { api } from '../api'
 import { fmtDuration, fmtItems, fmtKg, shortName } from '../lib/format'
 import { awaitingApproval, useStore } from '../store'
+import { PolicyPanel } from './PolicyPanel'
 import type { Order } from '../types'
 
 function Card({ o }: { o: Order }) {
@@ -10,7 +11,9 @@ function Card({ o }: { o: Order }) {
   const [note, setNote] = useState('')
   const [rejecting, setRejecting] = useState(false)
   const [busy, setBusy] = useState(false)
+  const simSeconds = useStore((s) => s.sim?.sim_seconds ?? 0)
   const wh = scenario?.warehouses.find((w) => w.id === o.warehouse_id)
+  const autoIn = o.auto_approve_at_sim != null ? Math.max(0, o.auto_approve_at_sim - simSeconds) / 60 : null
   const camp = scenario?.camps.find((c) => c.id === o.camp_id)
 
   const decide = (d: 'approve' | 'reject') => {
@@ -52,6 +55,15 @@ function Card({ o }: { o: Order }) {
         )}
       </div>
       {o.reason && <p className="mt-2 text-xs leading-relaxed text-slate-300">{o.reason}</p>}
+      <div className="mt-2 text-[11px]" data-testid="approval-countdown">
+        {autoIn != null ? (
+          <span className="text-sky-300">
+            ⏱ Auto-approves in {fmtDuration(autoIn)} under the Command policy unless you decide first
+          </span>
+        ) : (
+          <span className="text-amber-300">⏱ Waiting for a human decision (not covered by the policy)</span>
+        )}
+      </div>
       {rejecting && (
         <input
           className="mt-2 w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs"
@@ -80,6 +92,8 @@ export function ApprovalsList() {
   const orders = useStore((s) => s.orders)
   const list = awaitingApproval(orders)
   return (
+    <div className="flex min-h-0 flex-1 flex-col">
+    <PolicyPanel />
     <div className="min-h-0 flex-1 overflow-y-auto p-3">
       {list.length === 0 ? (
         <p className="px-2 py-10 text-center text-sm text-slate-500">
@@ -93,6 +107,7 @@ export function ApprovalsList() {
           ))}
         </ul>
       )}
+    </div>
     </div>
   )
 }

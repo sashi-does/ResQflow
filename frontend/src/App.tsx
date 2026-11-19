@@ -3,6 +3,7 @@ import { api } from './api'
 import { ConnectionBanner } from './components/ConnectionBanner'
 import { DemoControls } from './components/DemoControls'
 import { KpiStrip } from './components/KpiStrip'
+import { Legend } from './components/Legend'
 import { MapView } from './components/MapView'
 import { RightPanel } from './components/RightPanel'
 import { Toasts } from './components/Toasts'
@@ -36,6 +37,7 @@ export default function App() {
         <main className="relative min-w-0 flex-1">
           <MapView />
           {scenario && <DemoControls />}
+          {scenario && <Legend />}
           <ConnectionBanner />
           {!scenario && (
             <div className="absolute inset-0 z-[1002] flex items-center justify-center bg-slate-950/80 text-sm text-slate-400">

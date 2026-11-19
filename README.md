@@ -41,7 +41,7 @@ The Static plan differs only in what a static plan can't do:
 | Allocation | re-planned on every flood, hourly, when a camp turns critical, and when a truck frees up | decided once at 06:00; each truck keeps its original target camp |
 | Re-dispatch | any idle truck to whichever camp needs it most | idle trucks re-sent hourly to their *original* camp only |
 | Floods | trucks re-routed around closed roads; orders to cut-off camps recalled | routes ignore floods; trucks drive up to the flooded road and **wait until it reopens** |
-| Approvals | a human clicks in the live UI. Headless runs stand in with auto-approval after 20 sim-min | auto-approved after 20 sim-min |
+| Approvals | live UI: a human clicks, **or** the Command approval policy auto-approves *critical* orders ≤ 8 t after a 20-min countdown (reserve-use orders always need a human). Headless runs auto-approve every gated order after 20 sim-min | auto-approved after 20 sim-min (unchanged) |
 
 KPIs: **people-hours without water** (Σ population × hours a camp has 0 L), people-hours without food, **on-time deliveries**
 (arrived before the camp ran out of water), deliveries, **truck-hours stuck** (holding or waiting at a flooded road),

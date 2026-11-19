@@ -1,4 +1,4 @@
-import type { Hazard, KpiBundle, Order, Scenario, SimView, Snapshot } from './types'
+import type { ApprovalPolicy, Hazard, KpiBundle, Order, Scenario, SimView, Snapshot } from './types'
 
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
   const r = await fetch(`/api${path}`, {
@@ -49,4 +49,5 @@ export const api = {
   decide: (orderId: string, decision: 'approve' | 'reject', note?: string) =>
     req<Order>('POST', `/approvals/${orderId}`, { decision, note }),
   kpis: () => req<KpiBundle>('GET', '/kpis'),
+  setPolicy: (p: ApprovalPolicy) => req<ApprovalPolicy>('POST', '/policy', p),
 }

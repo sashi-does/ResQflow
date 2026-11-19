@@ -12,7 +12,7 @@ test('UI shows a banner when the backend dies and recovers when it comes back', 
   const errors: string[] = []
   page.on('pageerror', (err) => errors.push(err.message))
 
-  await page.goto('/')
+  await page.goto('/command')
   await expect(page.getByTestId('sim-time')).toHaveText(/D\d \d\d:\d\d/)
   await expect(page.getByText('Connection to the simulation lost')).toHaveCount(0)
 

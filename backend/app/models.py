@@ -151,7 +151,16 @@ class Order(BaseModel):
     created_at_sim: int = 0
     delivered_at_sim: int | None = None
     approval_requested_at_sim: int | None = None
+    auto_approve_at_sim: int | None = None  # set when a policy (or a headless run) will approve it if nobody acts
     eta_min: float | None = None
+
+
+class ApprovalPolicy(BaseModel):
+    """Command's approval policy (doc 10 A4). Reserve-use orders always need a human."""
+
+    auto_approve_critical: bool = True
+    max_tonnes: float = Field(8.0, ge=0, le=20)
+    delay_min: int = Field(20, ge=0, le=240)
 
 
 class LogRefs(BaseModel):

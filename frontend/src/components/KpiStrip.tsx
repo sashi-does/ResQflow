@@ -34,8 +34,16 @@ function Delta({ spec, a, b }: { spec: Spec; a: number; b: number }) {
   )
 }
 
+const MIN_DELIVERIES = 3
+const ENOUGH_DATA_AT_S = 6 * 3600 // D1 12:00
+
 export function KpiStrip() {
   const kpis = useStore((s) => s.kpis)
+  const simSeconds = useStore((s) => s.sim?.sim_seconds ?? 0)
+  const enoughData =
+    !!kpis &&
+    ((kpis.agentic.deliveries_total >= MIN_DELIVERIES && kpis.baseline.deliveries_total >= MIN_DELIVERIES) ||
+      simSeconds >= ENOUGH_DATA_AT_S)
   return (
     <footer
       className="flex h-[84px] shrink-0 items-stretch border-t border-slate-800 bg-slate-950"
@@ -44,7 +52,7 @@ export function KpiStrip() {
     >
       <div className="flex w-44 shrink-0 flex-col justify-center border-r border-slate-800 px-4">
         <span className="text-[13px] font-semibold text-white">Agentic vs Static</span>
-        <span className="text-[11px] leading-tight text-slate-400">same floods · plan fixed at 06:00 · no re-routing</span>
+        <span className="text-[11px] leading-tight text-slate-400">so far · same floods · static plan fixed at 06:00</span>
       </div>
       {SPECS.map((spec) => {
         const a = kpis?.agentic[spec.key] ?? 0
@@ -59,7 +67,13 @@ export function KpiStrip() {
               <span className="text-xl font-semibold tabular-nums text-white" data-testid={`kpi-${spec.key}`}>
                 {fmtA(a)}
               </span>
-              <Delta spec={spec} a={a} b={b} />
+              {enoughData ? (
+                <Delta spec={spec} a={a} b={b} />
+              ) : (
+                <span className="text-[11px] italic text-slate-500" data-testid="kpi-collecting">
+                  collecting data…
+                </span>
+              )}
             </div>
             <span className="text-[11px] tabular-nums text-slate-500">Static {fmtB(b)}</span>
           </div>

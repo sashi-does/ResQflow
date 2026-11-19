@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { Health } from './api'
 import type {
   AgentName,
+  ApprovalPolicy,
   CampView,
   CoordinatorView,
   Hazard,
@@ -56,6 +57,7 @@ interface State {
   orders: Record<string, Order>
   kpis: KpiBundle | null
   coordinator: CoordinatorView | null
+  policy: ApprovalPolicy | null
   thinking: boolean
   log: LogEntry[]
   flashes: Flash[]
@@ -103,6 +105,7 @@ export const useStore = create<State>((set, get) => ({
   orders: {},
   kpis: null,
   coordinator: null,
+  policy: null,
   thinking: false,
   log: [],
   flashes: [],
@@ -145,6 +148,7 @@ export const useStore = create<State>((set, get) => ({
       orders: byId(snap.orders),
       kpis: snap.kpis,
       coordinator: snap.coordinator,
+      policy: snap.policy ?? null,
       thinking: false,
       log: [...(snap.log ?? [])].reverse().slice(0, LOG_CAP),
       flashes: [],
@@ -270,6 +274,9 @@ export const useStore = create<State>((set, get) => ({
       }
       case 'kpis':
         set({ kpis: m.payload as KpiBundle })
+        return
+      case 'policy.updated':
+        set({ policy: m.payload as ApprovalPolicy })
         return
       default:
         return

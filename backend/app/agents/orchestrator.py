@@ -12,7 +12,7 @@ from app.agents.inventory import InventoryAgent
 from app.agents.monitor import MonitorAgent
 from app.agents.routing import RoutingAgent
 from app.agents.types import PlanResult
-from app.models import Hazard
+from app.models import ApprovalPolicy, Hazard
 from app.sim.runner import TimelineEvent
 from app.sim.world import WorldState
 
@@ -29,12 +29,13 @@ class Orchestrator:
         replan_every_min: int = 60,
         debounce_min: int = 5,
         max_orders: int = 8,
+        policy: ApprovalPolicy | None = None,
     ) -> None:
         self.monitor = MonitorAgent(weather_mode)
         self.inventory = InventoryAgent()
         self.routing = RoutingAgent()
         self.coordinator = CoordinatorAgent(approval_threshold_kg, max_orders)
-        self.dispatcher = DispatcherAgent(approval_threshold_kg, auto_approve_after_s)
+        self.dispatcher = DispatcherAgent(approval_threshold_kg, auto_approve_after_s, policy)
         self.replan_every_s = replan_every_min * 60
         self.debounce_s = debounce_min * 60
         self.pending: list[str] = []

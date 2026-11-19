@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from app.agents.orchestrator import Orchestrator
 from app.config import Settings
-from app.models import KPIs
+from app.models import ApprovalPolicy, KPIs
 from app.sim.baseline import StaticPolicy
 from app.sim.kpis import delta_pct
 from app.sim.runner import Simulation, load_timeline
@@ -39,6 +39,7 @@ def build_comparison(
     scenario: ScenarioData | None = None,
     timeline: bool = True,
     headless: bool = True,
+    policy: ApprovalPolicy | None = None,
 ) -> Comparison:
     s = settings or Settings()
     sc = scenario or load_scenario()
@@ -53,6 +54,7 @@ def build_comparison(
         weather_mode=s.weather_mode,
         replan_every_min=c["replan_every_min"],
         debounce_min=c["debounce_min"],
+        policy=None if headless else (policy or ApprovalPolicy()),
     )
     base_world = WorldState(sc, seed=s.seed, name="baseline", log=False)
     base_world.hazard_aware = False

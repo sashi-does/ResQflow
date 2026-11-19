@@ -149,7 +149,15 @@ export interface Order {
   source: 'llm' | 'heuristic'
   created_at_sim: number
   delivered_at_sim: number | null
+  approval_requested_at_sim: number | null
+  auto_approve_at_sim: number | null
   eta_min: number | null
+}
+
+export interface ApprovalPolicy {
+  auto_approve_critical: boolean
+  max_tonnes: number
+  delay_min: number
 }
 
 export interface LogRefs {
@@ -206,6 +214,7 @@ export interface Snapshot {
   orders: Order[]
   kpis: KpiBundle
   coordinator: CoordinatorView
+  policy?: ApprovalPolicy
   log?: LogEntry[]
 }
 

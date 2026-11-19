@@ -16,6 +16,7 @@ router = APIRouter()
 async def ws_endpoint(ws: WebSocket) -> None:
     await ws.accept()
     live = get_live()
+    live.fresh_session_reset()
     queue = live.subscribe()
     try:
         await ws.send_json({"type": "snapshot", "payload": live.snapshot()})

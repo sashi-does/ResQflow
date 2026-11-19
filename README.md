@@ -22,7 +22,27 @@ make test       # backend tests
 make e2e        # browser smoke test (uses your installed Chrome), writes docs/screenshots/
 ```
 
-Open the dashboard and press **Run Demo**. Keyboard: `Space` play/pause · `1`–`4` trigger floods · `A` approve the top order.
+Open http://localhost:5173 → **Watch the live demo**. Keyboard on `/command`: `Space` play/pause · `1`–`4` trigger floods · `A` approve the top order.
+
+## Four roles, one live world ("View as" switcher, no login)
+
+| Role | Route | What they do |
+|---|---|---|
+| District Command | `/command` | Live map, agent feed, **Agents** graph, approvals (with an approval policy), confirmations, **Ask RahatNet** copilot, after-action report |
+| Camp Coordinator | `/camp/C7` | Phone view: supplies, incoming trucks, **free-text field reports in English or Assamese** (Field Intake AI), delivery receipts |
+| Driver | `/driver/T3` | Phone view: job, road-by-road route, **full-screen re-route alert + Acknowledge**, report road problems (unverified until confirmed) |
+| Warehouse | `/warehouse/W2` | Stock vs safety reserve, loading queue, stock adjustments |
+
+## Where the AI is, and how it is kept honest
+- **Coordinator** (Claude, `LLM_MODEL`, default `claude-haiku-5-5`) proposes the allocation plan; a deterministic **validator** checks every
+  plan, rejections go back with the violations (max 2 retries), then a heuristic planner takes over. Large/critical orders go to a human.
+- **Field Intake** reads coordinators' free text (English/Assamese) into structured JSON, validated with Pydantic; big or uncertain changes
+  wait for Command to confirm. Items the system doesn't stock (ORS, baby food) become notes, never numbers.
+- **Ask RahatNet** copilot answers from a *frozen copy* of the live state with read-only tools (`get_camp`, `get_route`, `simulate_closure`).
+- **After-action report**: numbers are filled in by code from the KPIs and the log; the AI only writes the prose (an audit rejects any
+  figure it typed itself).
+- **No key?** Everything still runs: the heuristic planner plans, the two scripted demo field reports use *recorded* AI readings
+  (labelled as such), the copilot says it needs a key, and the report narrative comes from a template.
 
 ## How the "Static" baseline works (the comparison is honest)
 

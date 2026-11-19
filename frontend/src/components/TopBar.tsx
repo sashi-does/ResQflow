@@ -6,6 +6,8 @@ import { useStore } from '../store'
 const SPEEDS = [30, 120, 600]
 
 export function TopBar({ onTour, onCopilot }: { onTour?: () => void; onCopilot?: () => void }) {
+  const setReport = useStore((s) => s.setReport)
+  const hasReport = useStore((s) => !!s.report)
   const sim = useStore((s) => s.sim)
   const health = useStore((s) => s.health)
   const scenario = useStore((s) => s.scenario)
@@ -22,11 +24,11 @@ export function TopBar({ onTour, onCopilot }: { onTour?: () => void; onCopilot?:
         RahatNet
       </button>
       <span className="text-slate-600">▸</span>
-      <span className="text-sm text-slate-300">{scenario?.name ?? 'Assam Floods'}</span>
+      <span className="text-sm whitespace-nowrap text-slate-300">{scenario?.name ?? 'Assam Floods'}</span>
       <span className="ml-2 rounded bg-slate-800 px-2 py-0.5 font-mono text-sm tabular-nums text-sky-300" data-testid="sim-time">
         {sim?.sim_time ?? '—'}
       </span>
-      {sim?.ended && <span className="text-xs text-amber-300">scenario complete</span>}
+      {sim?.ended && <span className="text-xs whitespace-nowrap text-amber-300">ended</span>}
       <div className="ml-2 flex items-center gap-1">
         <button
           className="btn-icon"
@@ -65,14 +67,32 @@ export function TopBar({ onTour, onCopilot }: { onTour?: () => void; onCopilot?:
             ✦ Ask RahatNet
           </button>
         )}
+        {onCopilot && (
+          <button
+            className="btn-chip"
+            data-testid="end-report"
+            disabled={!connected}
+            onClick={() =>
+              (hasReport && sim?.ended ? Promise.resolve(useStore.getState().report) : api.report())
+                .then((r) => r && setReport(r))
+                .catch((e: unknown) => toast(String(e), 'error'))
+            }
+          >
+            {sim?.ended ? 'Report' : 'End & report'}
+          </button>
+        )}
         {onTour && (
           <button className="btn-chip" onClick={onTour} data-testid="tour-button">
             Tour
           </button>
         )}
-        <span className="flex items-center gap-1.5 text-xs text-slate-300" title={health?.llm_model}>
+        <span
+          className="flex items-center gap-1.5 text-xs whitespace-nowrap text-slate-300"
+          title={offline ? 'No API key: the Coordinator uses the deterministic heuristic planner' : `${provider} · ${health?.llm_model ?? ''}`}
+          data-testid="ai-badge"
+        >
           <span className={`h-2 w-2 rounded-full ${offline ? 'bg-amber-400' : 'bg-emerald-400'}`} />
-          Coordinator: {offline ? 'offline mode (heuristic)' : `${provider} · ${health?.llm_model ?? ''}`}
+          AI: {offline ? 'offline' : (health?.llm_model ?? provider)}
         </span>
         <button className="btn-primary" data-testid="run-demo" disabled={!connected} onClick={() => run(api.runDemo())}>
           Run Demo

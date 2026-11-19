@@ -52,6 +52,8 @@ class Simulation:
         if any(e.action == "end" for e in events):
             self.ended = True
         self.policy.on_step(self.world, events)
+        if self.ended:  # the scenario stops exactly at its end time: no step after the end-of-scenario summary
+            return
         engine.step(self.world, STEP_S)
 
     def run_until(self, sim_seconds: int) -> None:

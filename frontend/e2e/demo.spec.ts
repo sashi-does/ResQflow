@@ -97,6 +97,28 @@ test('demo run: trucks move, flood + re-route flash, approval, KPIs, zero consol
       if (sim.ended) break
     }
     await expect(page.getByTestId('sim-time')).toHaveText('D2 06:00', { timeout: 10_000 })
+
+    // after-action report opens by itself at the end of the scenario
+    const report = page.getByTestId('report')
+    await expect(report).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByTestId('report-summary')).toContainText('people-hours without water')
+    for (const key of ['people_hours_without_water', 'deliveries_on_time_pct', 'truck_hours_stuck', 'avg_delivery_min', 'supplies_delivered_kg']) {
+      const inReport = await page.getByTestId(`report-${key}`).textContent()
+      const inStrip = await page.getByTestId(`kpi-${key}`).textContent()
+      expect(inReport, key).toBe(inStrip) // the report shows exactly what the KPI strip shows
+    }
+    await page.screenshot({ path: `${SHOTS}/15-after-action-report.png` })
+    await page.evaluate(() => {
+      const w = window as unknown as { __printed: number; print: () => void }
+      w.__printed = 0
+      w.print = () => {
+        w.__printed++
+      }
+    })
+    await page.getByTestId('download-pdf').click()
+    expect(await page.evaluate(() => (window as unknown as { __printed: number }).__printed)).toBe(1)
+    await page.getByRole('button', { name: 'Close' }).click()
+
     await page.waitForTimeout(7000) // let the 07:15 flash and toasts expire (6.5 s / 4 s)
     await expect(page.locator('.flash-new')).toHaveCount(0)
     await expect(page.getByTestId('kpi-strip')).toBeVisible()

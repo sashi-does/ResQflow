@@ -312,6 +312,21 @@ export interface ReroutePayload {
   new_eta_sim_seconds: number | null
 }
 
+export interface AfterActionReport {
+  title: string
+  generated_at_sim: string
+  narrative: { summary: string; recommendations: string[] }
+  narrative_source: 'llm' | 'template'
+  narrative_model: string | null
+  narrative_note: string
+  kpis: KpiBundle
+  kpi_rows: { key: keyof KPIs; label: string; agentic: number; static: number; delta_pct: number | null; better: boolean | null }[]
+  timeline: { sim_time: string; agent: AgentName; kind: string; summary: string }[]
+  cut_off: { camp: string; population: number; reason: string; since: string | null }[]
+  escalations: { what: string; status: string; why: string }[]
+  counts: Record<string, number>
+}
+
 export interface WsMessage {
   type: string
   payload: unknown

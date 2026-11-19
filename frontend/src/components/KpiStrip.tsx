@@ -1,4 +1,4 @@
-import { fmtDuration, fmtKg, fmtNum } from '../lib/format'
+import { fmtKpi } from '../lib/kpiFormat'
 import { useStore } from '../store'
 import type { KPIs } from '../types'
 
@@ -10,11 +10,11 @@ interface Spec {
 }
 
 const SPECS: Spec[] = [
-  { key: 'people_hours_without_water', label: 'People-hours without water', lowerIsBetter: true, fmt: (v) => fmtNum(v) },
-  { key: 'deliveries_on_time_pct', label: 'On-time deliveries', lowerIsBetter: false, fmt: (v) => `${v.toFixed(0)}%` },
-  { key: 'truck_hours_stuck', label: 'Truck-hours stuck', lowerIsBetter: true, fmt: (v) => v.toFixed(1) },
-  { key: 'avg_delivery_min', label: 'Avg delivery time', lowerIsBetter: true, fmt: (v) => (v ? fmtDuration(v) : '—') },
-  { key: 'supplies_delivered_kg', label: 'Supplies delivered', lowerIsBetter: false, fmt: (v) => fmtKg(v) },
+  { key: 'people_hours_without_water', label: 'People-hours without water', lowerIsBetter: true, fmt: (v) => fmtKpi('people_hours_without_water', v) },
+  { key: 'deliveries_on_time_pct', label: 'On-time deliveries', lowerIsBetter: false, fmt: (v) => fmtKpi('deliveries_on_time_pct', v) },
+  { key: 'truck_hours_stuck', label: 'Truck-hours stuck', lowerIsBetter: true, fmt: (v) => fmtKpi('truck_hours_stuck', v) },
+  { key: 'avg_delivery_min', label: 'Avg delivery time', lowerIsBetter: true, fmt: (v) => fmtKpi('avg_delivery_min', v) },
+  { key: 'supplies_delivered_kg', label: 'Supplies delivered', lowerIsBetter: false, fmt: (v) => fmtKpi('supplies_delivered_kg', v) },
 ]
 
 const TIP = 'Static = same floods, same trucks, plan fixed at 06:00, no re-routing (trucks wait at flooded roads).'

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Health } from './api'
 import type {
+  AfterActionReport,
   AgentName,
   AgentStat,
   ApprovalPolicy,
@@ -62,6 +63,9 @@ interface State {
   coordinator: CoordinatorView | null
   policy: ApprovalPolicy | null
   agents: Record<string, AgentStat>
+  report: AfterActionReport | null
+  reportOpen: boolean
+  setReport: (r: AfterActionReport | null, open?: boolean) => void
   planSeq: number // increments on every plan.started / plan.completed (Agents view pulses on it)
   fieldReports: Record<string, FieldReport>
   receipts: Record<string, { received: Supplies; shortfall: Supplies }>
@@ -115,6 +119,9 @@ export const useStore = create<State>((set, get) => ({
   policy: null,
   agents: {},
   planSeq: 0,
+  report: null,
+  reportOpen: false,
+  setReport: (report, open = true) => set({ report, reportOpen: open && !!report }),
   fieldReports: {},
   receipts: {},
   thinking: false,
@@ -167,6 +174,8 @@ export const useStore = create<State>((set, get) => ({
       log: [...(snap.log ?? [])].reverse().slice(0, LOG_CAP),
       flashes: [],
       selected: null,
+      report: null,
+      reportOpen: false,
     }),
 
   applyMessage: (m) => {
@@ -301,6 +310,9 @@ export const useStore = create<State>((set, get) => ({
       }
       case 'kpis':
         set({ kpis: m.payload as KpiBundle })
+        return
+      case 'report.ready':
+        set({ report: m.payload as AfterActionReport, reportOpen: true })
         return
       case 'policy.updated':
         set({ policy: m.payload as ApprovalPolicy })

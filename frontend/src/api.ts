@@ -1,4 +1,5 @@
 import type {
+  AfterActionReport,
   ApprovalPolicy,
   DemoReport,
   FieldReport,
@@ -76,4 +77,5 @@ export const api = {
   adjustStock: (warehouseId: string, delta: Partial<Supplies>, note: string) =>
     req<WarehouseView>('POST', `/warehouses/${warehouseId}/adjust`, { delta, note }),
   ordersAll: () => req<Order[]>('GET', '/orders'),
+  report: () => req<AfterActionReport>('POST', '/report'),
 }

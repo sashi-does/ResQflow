@@ -11,7 +11,7 @@ export function RoleSwitcher() {
     <label className="flex items-center gap-1.5 text-xs text-slate-400">
       View as
       <select
-        className="rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-100"
+        className="max-w-[11rem] rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-100"
         value={value}
         onChange={(e) => navigate(e.target.value)}
         data-testid="role-switcher"

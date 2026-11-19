@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from './api'
 import { Copilot } from './components/Copilot'
+import { ReportModal } from './components/ReportModal'
 import { Toasts } from './components/Toasts'
 import { Tour } from './components/Tour'
 import { TopBar } from './components/TopBar'
@@ -58,6 +59,7 @@ export default function App() {
       {route.page === 'warehouse' && <WarehouseView warehouseId={route.id} />}
       {touring && <Tour onClose={() => setTouring(false)} />}
       {copilot && route.page === 'command' && <Copilot onClose={() => setCopilot(false)} />}
+      <ReportModal />
       <Toasts />
     </div>
   )

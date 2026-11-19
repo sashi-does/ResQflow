@@ -366,6 +366,24 @@ async def copilot(body: CopilotBody) -> dict:
     return out
 
 
+@router.post("/report")
+async def report() -> dict:
+    """End & report: pause, then write the after-action report from the current KPIs and log."""
+    live = get_live()
+    live.clock.running = False
+    out = await live.generate_report()
+    live.touch()
+    return out
+
+
+@router.get("/report")
+async def latest_report() -> dict:
+    live = get_live()
+    if live.report is None:
+        raise HTTPException(404, "no report yet")
+    return live.report
+
+
 @router.get("/kpis")
 async def kpis() -> dict:
     return get_live().cmp.kpis()

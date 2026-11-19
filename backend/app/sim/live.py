@@ -12,6 +12,7 @@ from shapely.geometry import LineString, shape
 from app.agents.field_intake import FieldIntakeAgent, ParseOutcome
 from app.agents.inventory import camp_level
 from app.agents.orchestrator import Orchestrator
+from app.agents.report import assemble, build_facts, llm_narrative
 from app.agents.types import CampLevel
 from app.config import Settings
 from app.geo.hazards import hazard_from_preset
@@ -56,6 +57,8 @@ class LiveSim:
         self.clock.reset()
         self._hazard_map: dict[str, str] = {}  # agentic hazard id -> baseline hazard id
         self.field_reports: dict[str, FieldReport] = {}
+        self.report: dict[str, Any] | None = None
+        self._report_task: asyncio.Task | None = None
         self.receipts: dict[str, dict[str, Any]] = {}
         self.pending_reroute: dict[str, dict[str, Any]] = {}  # truck id -> latest unacknowledged route change
         self.intake = FieldIntakeAgent(self.llm)
@@ -97,6 +100,32 @@ class LiveSim:
             self.broadcast("kpis", self.cmp.kpis())
         if self.cmp.agentic.ended:
             self.clock.running = False
+            self._schedule_report()
+
+    def _schedule_report(self) -> None:
+        """Scenario over: write the after-action report once, in the background (needs a running event loop)."""
+        if self.report is not None or self._report_task is not None:
+            return
+        with contextlib.suppress(RuntimeError):  # no event loop (sync tests)
+            self._report_task = asyncio.get_running_loop().create_task(self.generate_report())
+
+    async def generate_report(self) -> dict[str, Any]:
+        f = build_facts(self.world, self.cmp.kpis(), list(self.field_reports.values()))  # numbers: sim thread, now
+        narrative, note = None, ""
+        if self.llm.available:
+            narrative, note = await asyncio.to_thread(llm_narrative, self.llm, f)
+        self.report = assemble(f, narrative, note, self.llm)
+        k = self.report["kpis"]
+        self.world.bus.log(
+            "system",
+            "report.ready",
+            f"After-action report ready ({self.report['generated_at_sim']}): people-hours without water "
+            f"{k['agentic']['people_hours_without_water']:,.0f} vs {k['baseline']['people_hours_without_water']:,.0f} "
+            "for the static plan.",
+            self.report["narrative_note"],
+        )
+        self.broadcast("report.ready", self.report)
+        return self.report
 
     # ------------------------------------------------------------ accessors
     @property

@@ -201,6 +201,24 @@ body {
   }
 }
 
+/* ---------- print: only the after-action report ---------- */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-report,
+  .print-report * {
+    visibility: visible;
+  }
+  .print-report {
+    position: absolute;
+    inset: 0;
+  }
+  body {
+    background: white;
+  }
+}
+
 /* ---------- agents view ---------- */
 .node-pulse {
   animation: node-pulse 0.7s ease-in-out 2 alternate;

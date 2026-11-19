@@ -14,6 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.config import Settings  # noqa: E402
+from app.llm.client import make_llm  # noqa: E402
 from app.sim.comparison import build_comparison  # noqa: E402
 from app.sim.scenario import load_scenario, parse_sim_time  # noqa: E402
 
@@ -47,11 +48,18 @@ def main() -> None:
     ap.add_argument("--to", dest="t_to", default=None, help='print log up to e.g. "D1 09:00"')
     ap.add_argument("--reasoning", action="store_true", help="also print each entry's reasoning")
     ap.add_argument("--quiet", action="store_true", help="KPIs only")
+    ap.add_argument("--llm", action="store_true", help="use the configured LLM (needs ANTHROPIC_API_KEY in .env)")
     args = ap.parse_args()
 
-    settings = Settings(llm_provider="mock") if args.seed is None else Settings(llm_provider="mock", seed=args.seed)
+    base = Settings()
+    settings = base if args.llm else Settings(llm_provider="mock")
+    if args.seed is not None:
+        settings = settings.model_copy(update={"seed": args.seed})
+    llm = make_llm(settings) if args.llm else None
+    if args.llm and (llm is None or not llm.available):
+        print("--llm: no ANTHROPIC_API_KEY found (.env); running in mock mode", file=sys.stderr)
     sc = load_scenario(args.scenario)
-    cmp_ = build_comparison(settings, scenario=sc, timeline=not args.no_timeline, headless=True)
+    cmp_ = build_comparison(settings, scenario=sc, timeline=not args.no_timeline, headless=True, llm=llm)
     t0 = time.perf_counter()
     cmp_.run_until(parse_duration(args.until))
     elapsed = time.perf_counter() - t0
@@ -59,7 +67,8 @@ def main() -> None:
 
     lo = parse_sim_time(args.t_from, sc.start_offset_s) if args.t_from else -1
     hi = parse_sim_time(args.t_to, sc.start_offset_s) if args.t_to else 10**9
-    print(f"== {sc.raw['name']} · ran to {world.sim_time} in {elapsed:.2f}s (mock coordinator) ==")
+    mode = f"LLM: {llm.model}" if llm is not None and llm.available else "mock coordinator"
+    print(f"== {sc.raw['name']} · ran to {world.sim_time} in {elapsed:.2f}s ({mode}) ==")
     if not args.quiet:
         for e in world.bus.entries:
             if lo <= e.sim_seconds <= hi:

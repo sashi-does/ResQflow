@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     gemini_api_key: str = ""
     llm_timeout_s: float = 20.0
+    llm_effort: Literal["low", "medium", "high"] = "low"  # low latency at high sim speed
     ors_api_key: str = ""
     weather_mode: Literal["live", "cache"] = "cache"
     sim_speed: int = 120
@@ -39,7 +40,8 @@ class Settings(BaseSettings):
             "openai": self.openai_api_key,
             "gemini": self.gemini_api_key,
         }
-        if self.llm_provider == "mock" or not keys.get(self.llm_provider):
+        # only anthropic is implemented; openai/gemini fall back to mock
+        if self.llm_provider != "anthropic" or not keys.get(self.llm_provider):
             return "mock"
         return self.llm_provider
 

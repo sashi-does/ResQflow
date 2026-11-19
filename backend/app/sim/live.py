@@ -14,6 +14,7 @@ from app.agents.orchestrator import Orchestrator
 from app.agents.types import CampLevel
 from app.config import Settings
 from app.geo.hazards import hazard_from_preset
+from app.llm.client import display_name, make_llm
 from app.models import ApprovalPolicy, Camp, Hazard
 from app.sim.clock import ALLOWED_SPEEDS, STEP_S, TICK_REAL_S, SimClock
 from app.sim.comparison import Comparison, build_comparison
@@ -34,15 +35,19 @@ class LiveSim:
         self.clients: set[asyncio.Queue] = set()
         self.demo_timeline = True
         self.policy = ApprovalPolicy()
+        self.llm = make_llm(settings)
         self._task: asyncio.Task | None = None
         self._ticks = 0
         self.reset(demo_timeline=True)
 
     # ------------------------------------------------------------ lifecycle
     def reset(self, demo_timeline: bool = True) -> None:
+        old = getattr(self, "cmp", None)
+        if old is not None:
+            old.agentic.policy.coordinator.shutdown()  # type: ignore[attr-defined]
         self.demo_timeline = demo_timeline
         self.cmp: Comparison = build_comparison(
-            self.settings, timeline=demo_timeline, headless=False, policy=self.policy
+            self.settings, timeline=demo_timeline, headless=False, policy=self.policy, llm=self.llm
         )
         self.world.bus.subscribe(self._on_event)
         self.clock.running = False
@@ -203,7 +208,8 @@ class LiveSim:
 
     def replan(self) -> None:
         self.orch.request("manual re-plan request")
-        self.orch.run_cycle(self.world)
+        if not self.orch.coordinator.busy:  # never two planning cycles at once
+            self.orch.run_cycle(self.world)
 
     def approve(self, order_id: str, note: str | None) -> dict:
         order = self.orch.dispatcher.approve(self.world, order_id, note)
@@ -272,7 +278,9 @@ class LiveSim:
     def coordinator_view(self) -> dict[str, Any]:
         r = self.orch.last_result
         return {
-            "busy": False,
+            "busy": self.orch.coordinator.busy,
+            "label": self.orch.coordinator.label,
+            "model": display_name(self.llm.model) if self.llm.available else None,
             "last_plan_source": r.source if r else None,
             "last_latency_ms": r.latency_ms if r else None,
             "attempts": r.attempts if r else 0,

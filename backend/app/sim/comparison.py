@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from app.agents.orchestrator import Orchestrator
 from app.config import Settings
+from app.llm.client import LLMClient
 from app.models import ApprovalPolicy, KPIs
 from app.sim.baseline import StaticPolicy
 from app.sim.kpis import delta_pct
@@ -40,6 +41,7 @@ def build_comparison(
     timeline: bool = True,
     headless: bool = True,
     policy: ApprovalPolicy | None = None,
+    llm: LLMClient | None = None,
 ) -> Comparison:
     s = settings or Settings()
     sc = scenario or load_scenario()
@@ -55,6 +57,9 @@ def build_comparison(
         replan_every_min=c["replan_every_min"],
         debounce_min=c["debounce_min"],
         policy=None if headless else (policy or ApprovalPolicy()),
+        llm=llm,
+        background_llm=not headless,
+        inject_fault=s.demo_inject_fault and timeline,
     )
     base_world = WorldState(sc, seed=s.seed, name="baseline", log=False)
     base_world.hazard_aware = False

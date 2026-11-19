@@ -12,6 +12,7 @@ from app.agents.inventory import InventoryAgent
 from app.agents.monitor import MonitorAgent
 from app.agents.routing import RoutingAgent
 from app.agents.types import PlanResult
+from app.llm.client import LLMClient
 from app.models import ApprovalPolicy, Hazard
 from app.sim.runner import TimelineEvent
 from app.sim.world import WorldState
@@ -30,11 +31,15 @@ class Orchestrator:
         debounce_min: int = 5,
         max_orders: int = 8,
         policy: ApprovalPolicy | None = None,
+        llm: LLMClient | None = None,
+        background_llm: bool = False,
+        inject_fault: bool = False,
     ) -> None:
         self.monitor = MonitorAgent(weather_mode)
         self.inventory = InventoryAgent()
         self.routing = RoutingAgent()
-        self.coordinator = CoordinatorAgent(approval_threshold_kg, max_orders)
+        self.coordinator = CoordinatorAgent(approval_threshold_kg, max_orders, llm, background=background_llm)
+        self.inject_fault = inject_fault
         self.dispatcher = DispatcherAgent(approval_threshold_kg, auto_approve_after_s, policy)
         self.replan_every_s = replan_every_min * 60
         self.debounce_s = debounce_min * 60
@@ -50,6 +55,10 @@ class Orchestrator:
     def on_step(self, world: WorldState, events: list[TimelineEvent]) -> None:
         for ev in events:
             self.handle_event(world, ev)
+        if self.coordinator.busy:  # live mode: an LLM answer may have arrived
+            result = self.coordinator.poll(world)
+            if result is not None:
+                self._complete(world, result)
         for cid in self.inventory.track(world):
             self.request(f"{world.camps[cid].name} became critical")
         free = {t.id for t in world.trucks.values() if world.truck_is_free(t.id)}
@@ -64,7 +73,11 @@ class Orchestrator:
             self.request("scenario start")
         elif world.sim_seconds - self.last_cycle_at >= self.replan_every_s:
             self.request("hourly re-plan")
-        if self.pending and (self.last_cycle_at is None or world.sim_seconds - self.last_cycle_at >= self.debounce_s):
+        if (
+            self.pending
+            and not self.coordinator.busy
+            and (self.last_cycle_at is None or world.sim_seconds - self.last_cycle_at >= self.debounce_s)
+        ):
             self.run_cycle(world)
 
     # ------------------------------------------------------------ external triggers (timeline, API)
@@ -94,6 +107,8 @@ class Orchestrator:
         if hazard:
             self.routing.on_hazard_added(world, hazard)
             self.request(f"new hazard: {hazard.label}")
+            if self.inject_fault and not self.coordinator.injected:
+                self.coordinator.inject_next = True  # DEMO_INJECT_FAULT: corrupt the next plan once
         return hazard
 
     def remove_hazard(self, world: WorldState, hazard_id: str) -> Hazard | None:
@@ -108,7 +123,7 @@ class Orchestrator:
             self.pending.append(trigger)
 
     # ------------------------------------------------------------ the cycle
-    def run_cycle(self, world: WorldState) -> PlanResult:
+    def run_cycle(self, world: WorldState) -> PlanResult | None:
         trigger = "; ".join(self.pending)
         self.pending = []
         self.last_cycle_at = world.sim_seconds
@@ -119,8 +134,13 @@ class Orchestrator:
             cid: self.inventory.camp_status(world, world.camps[cid], reachable=not st.cut_off)
             for cid, st in statuses.items()
         }  # refresh incoming after recalls
-        world.bus.publish("plan.started", {"trigger": trigger})
+        world.bus.publish("plan.started", {"trigger": trigger, "coordinator": self.coordinator.label})
         result = self.coordinator.plan(world, statuses, trigger)
+        if result is None:  # the LLM is thinking in the background; finished in on_step via poll()
+            return None
+        return self._complete(world, result)
+
+    def _complete(self, world: WorldState, result: PlanResult) -> PlanResult:
         self.dispatcher.execute(world, result)
         world.bus.publish(
             "plan.completed",

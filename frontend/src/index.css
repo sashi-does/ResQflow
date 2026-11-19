@@ -201,6 +201,20 @@ body {
   }
 }
 
+/* ---------- agents view ---------- */
+.node-pulse {
+  animation: node-pulse 0.7s ease-in-out 2 alternate;
+}
+@keyframes node-pulse {
+  to {
+    transform: scale(1.18);
+  }
+}
+.edge-pulse {
+  stroke-dasharray: 6 5;
+  animation: march 0.5s linear infinite;
+}
+
 /* ---------- feed ---------- */
 .shimmer {
   background: linear-gradient(90deg, transparent, rgb(16 185 129 / 0.15), transparent);

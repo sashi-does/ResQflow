@@ -269,7 +269,18 @@ export interface CoordinatorView {
   provider?: string
 }
 
+export interface AgentStat {
+  count: number
+  last_summary: string | null
+  last_at: string | null
+  avg_latency_ms: number | null
+  model?: string
+  retries?: number
+  busy?: boolean
+}
+
 export interface Snapshot {
+  agents?: Record<string, AgentStat>
   sim: SimView
   trucks: TruckView[]
   warehouses: WarehouseView[]
@@ -286,6 +297,7 @@ export interface Snapshot {
 }
 
 export interface TickPayload extends SimView {
+  agents?: Record<string, AgentStat>
   trucks: { id: string; lat: number; lon: number; status: TruckStatus }[]
   camps: CampView[]
   warehouses: WarehouseView[]

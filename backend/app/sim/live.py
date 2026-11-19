@@ -182,6 +182,8 @@ class LiveSim:
     def finish_field_report(self, report: FieldReport, outcome: ParseOutcome) -> FieldReport:
         if report.id not in self.field_reports:  # the world was reset while the AI was reading
             return report
+        if outcome.latency_ms is not None:
+            self.world.bus.record_ms("field_intake", outcome.latency_ms)
         self.intake.apply(self.world, report, outcome)
         if report.status == "applied":
             self._mirror_report_to_baseline(report)
@@ -207,6 +209,16 @@ class LiveSim:
         if report.parsed is None:
             return
         self.intake._apply_numbers(self.baseline, self.baseline.camps[report.camp_id], report.parsed)
+
+    def agents_view(self) -> dict[str, Any]:
+        stats = self.world.bus.agent_stats()
+        coord = stats.setdefault(
+            "coordinator", {"count": 0, "last_summary": None, "last_at": None, "avg_latency_ms": None}
+        )
+        coord["model"] = display_name(self.llm.model) if self.llm.available else "offline (heuristic)"
+        coord["retries"] = sum(1 for e in self.world.bus.entries if e.kind == "plan.rejected")
+        coord["busy"] = self.orch.coordinator.busy
+        return stats
 
     def touch(self) -> None:
         """Push current state to every role view now (ticks only flow while the sim runs)."""
@@ -531,6 +543,7 @@ class LiveSim:
             "coordinator": self.coordinator_view(),
             "policy": self.policy.model_dump(),
             "field_reports": [r.model_dump() for r in self.field_reports.values()],
+            "agents": self.agents_view(),
             "receipts": self.receipts,
             "log": [e.model_dump() for e in w.bus.entries[-200:]],
         }
@@ -546,6 +559,7 @@ class LiveSim:
             "trucks": [self.truck_view(t) for t in sorted(w.trucks)],  # full views: role pages are live from WS
             "camps": [self.camp_view(c) for c in w.camps.values()],
             "warehouses": [self.warehouse_view(x) for x in sorted(w.warehouses)],
+            "agents": self.agents_view(),
         }
 
 

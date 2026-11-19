@@ -6,6 +6,10 @@ Debounces and timers are in sim time, so headless runs are reproducible.
 
 from __future__ import annotations
 
+import time
+from collections.abc import Iterator
+from contextlib import contextmanager
+
 from app.agents.coordinator import CoordinatorAgent
 from app.agents.dispatcher import DispatcherAgent
 from app.agents.inventory import InventoryAgent
@@ -16,6 +20,13 @@ from app.llm.client import LLMClient
 from app.models import ApprovalPolicy, Hazard
 from app.sim.runner import TimelineEvent
 from app.sim.world import WorldState
+
+
+@contextmanager
+def timed(world: WorldState, agent: str) -> Iterator[None]:
+    t0 = time.perf_counter()
+    yield
+    world.bus.record_ms(agent, (time.perf_counter() - t0) * 1000)
 
 
 class Orchestrator:
@@ -103,18 +114,22 @@ class Orchestrator:
             )
 
     def add_preset(self, world: WorldState, preset_id: str, source: str = "scripted demo timeline") -> Hazard | None:
-        hazard = self.monitor.add_preset(world, preset_id, source)
+        with timed(world, "monitor"):
+            hazard = self.monitor.add_preset(world, preset_id, source)
         if hazard:
-            self.routing.on_hazard_added(world, hazard)
+            with timed(world, "routing"):
+                self.routing.on_hazard_added(world, hazard)
             self.request(f"new hazard: {hazard.label}")
             if self.inject_fault and not self.coordinator.injected:
                 self.coordinator.inject_next = True  # DEMO_INJECT_FAULT: corrupt the next plan once
         return hazard
 
     def remove_hazard(self, world: WorldState, hazard_id: str) -> Hazard | None:
-        hazard = self.monitor.remove_hazard(world, hazard_id)
+        with timed(world, "monitor"):
+            hazard = self.monitor.remove_hazard(world, hazard_id)
         if hazard:
-            self.routing.on_hazard_removed(world, hazard)
+            with timed(world, "routing"):
+                self.routing.on_hazard_removed(world, hazard)
             self.request(f"hazard cleared: {hazard.label}")
         return hazard
 
@@ -128,7 +143,8 @@ class Orchestrator:
         self.pending = []
         self.last_cycle_at = world.sim_seconds
         self.routing.resume_holding(world)
-        statuses = self.inventory.run(world)
+        with timed(world, "inventory"):
+            statuses = self.inventory.run(world)
         self.dispatcher.recall_cut_off(world)
         statuses = {
             cid: self.inventory.camp_status(world, world.camps[cid], reachable=not st.cut_off)
@@ -141,7 +157,9 @@ class Orchestrator:
         return self._complete(world, result)
 
     def _complete(self, world: WorldState, result: PlanResult) -> PlanResult:
-        self.dispatcher.execute(world, result)
+        world.bus.record_ms("coordinator", result.latency_ms)
+        with timed(world, "dispatcher"):
+            self.dispatcher.execute(world, result)
         world.bus.publish(
             "plan.completed",
             {

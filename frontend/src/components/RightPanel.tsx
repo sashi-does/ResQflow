@@ -1,6 +1,7 @@
 import { awaitingApproval, useStore } from '../store'
 import type { Tab } from '../store'
 import { AgentFeed } from './AgentFeed'
+import { AgentsView } from './AgentsView'
 import { ApprovalsList } from './ApprovalsList'
 import { CampsTable } from './CampsTable'
 
@@ -16,6 +17,7 @@ export function RightPanel() {
     hazards.filter((h) => h.verified === false).length
   const tabs: { id: Tab; label: string }[] = [
     { id: 'feed', label: 'Agent Feed' },
+    { id: 'agents', label: 'Agents' },
     { id: 'approvals', label: 'Approvals' },
     { id: 'camps', label: 'Camps' },
   ]
@@ -42,6 +44,7 @@ export function RightPanel() {
         ))}
       </nav>
       {tab === 'feed' && <AgentFeed />}
+      {tab === 'agents' && <AgentsView />}
       {tab === 'approvals' && <ApprovalsList />}
       {tab === 'camps' && <CampsTable />}
     </aside>

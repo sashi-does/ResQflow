@@ -24,6 +24,29 @@ class EventBus:
         self.subscribers: list[Subscriber] = []
         self.entries: list[LogEntry] = []
         self._next_id = 1
+        self.stats: dict[str, dict[str, Any]] = {}  # per agent: count, last_summary, last_at, timing
+
+    def _stat(self, agent: str) -> dict[str, Any]:
+        return self.stats.setdefault(
+            agent, {"count": 0, "last_summary": None, "last_at": None, "total_ms": 0.0, "timed": 0}
+        )
+
+    def record_ms(self, agent: str, ms: float) -> None:
+        """Time spent by an agent on one piece of work (for the Agents view)."""
+        s = self._stat(agent)
+        s["total_ms"] += ms
+        s["timed"] += 1
+
+    def agent_stats(self) -> dict[str, dict[str, Any]]:
+        return {
+            a: {
+                "count": s["count"],
+                "last_summary": s["last_summary"],
+                "last_at": s["last_at"],
+                "avg_latency_ms": round(s["total_ms"] / s["timed"], 1) if s["timed"] else None,
+            }
+            for a, s in self.stats.items()
+        }
 
     def subscribe(self, fn: Subscriber) -> None:
         self.subscribers.append(fn)
@@ -58,5 +81,8 @@ class EventBus:
         )
         self._next_id += 1
         self.entries.append(entry)
+        st = self._stat(agent)
+        st["count"] += 1
+        st["last_summary"], st["last_at"] = summary, sim_time
         self.publish("log", entry.model_dump())
         return entry

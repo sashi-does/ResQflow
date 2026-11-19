@@ -5,7 +5,7 @@ import { useStore } from '../store'
 
 const SPEEDS = [30, 120, 600]
 
-export function TopBar({ onTour }: { onTour?: () => void }) {
+export function TopBar({ onTour, onCopilot }: { onTour?: () => void; onCopilot?: () => void }) {
   const sim = useStore((s) => s.sim)
   const health = useStore((s) => s.health)
   const scenario = useStore((s) => s.scenario)
@@ -60,6 +60,11 @@ export function TopBar({ onTour }: { onTour?: () => void }) {
       </div>
       <div className="ml-auto flex items-center gap-3">
         <RoleSwitcher />
+        {onCopilot && (
+          <button className="rounded-md border border-emerald-500/60 px-2.5 py-1 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/10" onClick={onCopilot} data-testid="copilot-button">
+            ✦ Ask RahatNet
+          </button>
+        )}
         {onTour && (
           <button className="btn-chip" onClick={onTour} data-testid="tour-button">
             Tour

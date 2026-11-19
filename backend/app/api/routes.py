@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
+from app.agents.copilot import ask, freeze
 from app.agents.field_intake import load_demo_reports
 from app.config import get_settings
 from app.geo.hazards import hazard_from_preset
@@ -334,6 +336,33 @@ async def warehouse_adjust(warehouse_id: str, body: AdjustBody) -> dict:
         raise HTTPException(404, f"unknown warehouse {warehouse_id}")
     out = live.adjust_stock(warehouse_id, body.delta, body.note)
     live.touch()
+    return out
+
+
+class CopilotBody(BaseModel):
+    question: str
+
+
+@router.get("/agents")
+async def agents() -> dict:
+    return get_live().agents_view()
+
+
+@router.post("/copilot")
+async def copilot(body: CopilotBody) -> dict:
+    """Read-only: state is frozen here (sim thread); the LLM and its tools run on that copy off the event loop."""
+    live = get_live()
+    frozen = freeze(live.world, live.cmp.kpis())
+    t0 = time.perf_counter()
+    out = await asyncio.to_thread(ask, live.llm, frozen, body.question)
+    if not out.get("needs_key"):
+        live.world.bus.log(
+            "human",
+            "copilot.asked",
+            f'Command asked the copilot: "{body.question.strip()[:140]}"',
+            out.get("answer", ""),
+        )
+        live.world.bus.record_ms("copilot", (time.perf_counter() - t0) * 1000)
     return out
 
 

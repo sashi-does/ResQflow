@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Iterable
 from typing import Any
 
@@ -40,6 +41,21 @@ def validate(
     exclude_order_ids: Iterable[str] = (),
 ) -> ValidationResult:
     """Check every order against the *current* world. See docs/03_AGENTS.md §5 for the rules."""
+    t0 = time.perf_counter()
+    try:
+        return _validate(world, plan, max_orders=max_orders, statuses=statuses, exclude_order_ids=exclude_order_ids)
+    finally:
+        world.bus.record_ms("validator", (time.perf_counter() - t0) * 1000)
+
+
+def _validate(
+    world: WorldState,
+    plan: dict[str, Any],
+    *,
+    max_orders: int,
+    statuses: dict[str, CampStatus] | None,
+    exclude_order_ids: Iterable[str],
+) -> ValidationResult:
     res = ValidationResult()
     exclude = frozenset(exclude_order_ids)
     orders = plan.get("orders") if isinstance(plan, dict) else None

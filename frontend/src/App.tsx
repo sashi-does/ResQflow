@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from './api'
+import { Copilot } from './components/Copilot'
 import { Toasts } from './components/Toasts'
 import { Tour } from './components/Tour'
 import { TopBar } from './components/TopBar'
@@ -19,6 +20,7 @@ export default function App() {
   const setError = useStore((s) => s.setError)
   const route = parseRoute(usePath())
   const [touring, setTouring] = useState(false)
+  const [copilot, setCopilot] = useState(false)
 
   useLiveSocket()
   useKeyboardShortcuts(route.page === 'command')
@@ -46,12 +48,16 @@ export default function App() {
   }
   return (
     <div className="flex h-full flex-col">
-      <TopBar onTour={route.page === 'command' ? () => setTouring(true) : undefined} />
+      <TopBar
+        onTour={route.page === 'command' ? () => setTouring(true) : undefined}
+        onCopilot={route.page === 'command' ? () => setCopilot((v) => !v) : undefined}
+      />
       {route.page === 'command' && <Command />}
       {route.page === 'camp' && <CampView campId={route.id} />}
       {route.page === 'driver' && <DriverView truckId={route.id} />}
       {route.page === 'warehouse' && <WarehouseView warehouseId={route.id} />}
       {touring && <Tour onClose={() => setTouring(false)} />}
+      {copilot && route.page === 'command' && <Copilot onClose={() => setCopilot(false)} />}
       <Toasts />
     </div>
   )

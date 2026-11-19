@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { Health } from './api'
 import type {
   AgentName,
+  AgentStat,
   ApprovalPolicy,
   FieldReport,
   Supplies,
@@ -42,7 +43,7 @@ export interface Toast {
   tone: 'ok' | 'warn' | 'error' | 'info'
 }
 
-export type Tab = 'feed' | 'approvals' | 'camps'
+export type Tab = 'feed' | 'agents' | 'approvals' | 'camps'
 
 interface State {
   scenario: Scenario | null
@@ -60,6 +61,8 @@ interface State {
   kpis: KpiBundle | null
   coordinator: CoordinatorView | null
   policy: ApprovalPolicy | null
+  agents: Record<string, AgentStat>
+  planSeq: number // increments on every plan.started / plan.completed (Agents view pulses on it)
   fieldReports: Record<string, FieldReport>
   receipts: Record<string, { received: Supplies; shortfall: Supplies }>
   thinking: boolean
@@ -110,6 +113,8 @@ export const useStore = create<State>((set, get) => ({
   kpis: null,
   coordinator: null,
   policy: null,
+  agents: {},
+  planSeq: 0,
   fieldReports: {},
   receipts: {},
   thinking: false,
@@ -155,6 +160,7 @@ export const useStore = create<State>((set, get) => ({
       kpis: snap.kpis,
       coordinator: snap.coordinator,
       policy: snap.policy ?? null,
+      agents: snap.agents ?? {},
       fieldReports: Object.fromEntries((snap.field_reports ?? []).map((r) => [r.id, r])),
       receipts: snap.receipts ?? {},
       thinking: false,
@@ -186,6 +192,7 @@ export const useStore = create<State>((set, get) => ({
           tickAt: performance.now(),
           camps: byId(p.camps),
           warehouses: byId(p.warehouses),
+          agents: p.agents ?? s.agents,
         })
         return
       }
@@ -270,12 +277,13 @@ export const useStore = create<State>((set, get) => ({
         return
       }
       case 'plan.started':
-        set({ thinking: true })
+        set({ thinking: true, planSeq: s.planSeq + 1 })
         return
       case 'plan.completed': {
         const p = m.payload as { source: string; attempts: number; latency_ms: number }
         set({
           thinking: false,
+          planSeq: s.planSeq + 1,
           coordinator: {
             ...(s.coordinator ?? { busy: false, last_plan_source: null, last_latency_ms: null, attempts: 0 }),
             last_plan_source: p.source,

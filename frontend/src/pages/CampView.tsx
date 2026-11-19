@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api } from '../api'
-import { Card, PhoneFrame } from '../components/PhoneFrame'
+import { Activity, FocusMap, Panel, RolePage, Stat } from '../components/RoleLayout'
 import { CAMP_COLORS, fmtDuration, fmtItems, fmtNum, shortName } from '../lib/format'
 import { useStore } from '../store'
-import type { DemoReport, FieldReport, Order, Supplies } from '../types'
+import type { DemoReport, FieldReport, LatLon, LogEntry, Order, Supplies } from '../types'
 
 const ITEM_LABEL: Record<keyof Supplies, string> = { water_l: 'Water (L)', food_rations: 'Food (rations)', medical_kits: 'Medical kits' }
 const STATUS_TEXT: Record<FieldReport['status'], string> = {
@@ -31,15 +31,15 @@ function speechCtor(): (new () => SpeechRec) | null {
 function ReportCard({ r }: { r: FieldReport }) {
   const tone = r.status === 'applied' || r.status === 'confirmed' ? 'ok' : r.status === 'rejected' ? 'bad' : 'warn'
   return (
-    <div className={`mt-2 rounded-lg border p-2 text-xs ${tone === 'ok' ? 'border-emerald-500/40' : tone === 'bad' ? 'border-red-500/40' : 'border-amber-500/40'}`} data-testid="field-report">
-      <div className="flex items-center gap-2 text-[10px] text-slate-400">
+    <div className={`rounded-lg border p-3 text-sm ${tone === 'ok' ? 'border-emerald-500/40' : tone === 'bad' ? 'border-red-500/40' : 'border-amber-500/40'}`} data-testid="field-report">
+      <div className="flex items-center gap-2 text-xs text-slate-400">
         <span className="font-mono">{r.sim_time}</span>
         <span className="ml-auto font-semibold" data-testid="field-report-status">{STATUS_TEXT[r.status]}</span>
       </div>
-      <p className="mt-1 text-slate-200">“{r.text}”</p>
+      <p className="mt-1.5 text-slate-100">“{r.text}”</p>
       {r.parsed && (
-        <div className="mt-1.5 rounded bg-slate-900 p-1.5 text-slate-300">
-          <div className="text-[10px] text-pink-300">
+        <div className="mt-2 rounded-md bg-slate-950 p-2.5 text-slate-300">
+          <div className="mb-1 text-xs text-pink-300">
             Field Intake AI read it as
             {r.source === 'recorded' ? ' (recorded AI response, offline demo)' : r.model ? ` (${r.model})` : ''} ·{' '}
             {Math.round(r.parsed.confidence * 100)}% sure
@@ -61,32 +61,32 @@ function DeliveryCheck({ o }: { o: Order }) {
   if (receipt) {
     const short = Object.values(receipt.shortfall).some((v) => v > 0)
     return (
-      <div className="mt-2 text-xs text-slate-300">
+      <div className="text-sm text-slate-300">
         {o.id} ({o.truck_id}): {short ? <span className="text-amber-300">short by {fmtItems(receipt.shortfall)}</span> : 'received in full ✓'}
       </div>
     )
   }
   return (
-    <div className="mt-2 rounded-lg border border-slate-700 p-2 text-xs" data-testid="delivery-check">
+    <div className="rounded-lg border border-slate-700 p-3 text-sm" data-testid="delivery-check">
       <div className="text-slate-300">
         {o.id} from truck {o.truck_id}: expected {fmtItems(o.items)}
       </div>
-      <div className="mt-1 grid grid-cols-3 gap-1">
+      <div className="mt-2 grid grid-cols-3 gap-2">
         {(Object.keys(ITEM_LABEL) as (keyof Supplies)[]).map((k) => (
-          <label key={k} className="text-[10px] text-slate-400">
+          <label key={k} className="text-xs text-slate-400">
             {ITEM_LABEL[k]}
             <input
               type="number"
               min={0}
               value={vals[k]}
               onChange={(e) => setVals({ ...vals, [k]: Number(e.target.value) })}
-              className="w-full rounded border border-slate-700 bg-slate-900 px-1 text-slate-100"
+              className="mt-0.5 w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 text-slate-100"
             />
           </label>
         ))}
       </div>
       <button
-        className="btn-approve mt-1.5 w-full"
+        className="btn-approve mt-2"
         onClick={() =>
           api
             .confirmDelivery(o.camp_id, o.id, vals)
@@ -126,7 +126,7 @@ export function CampView({ campId }: { campId: string }) {
   useEffect(() => {
     api
       .ordersAll()
-      .then((os) => setDelivered(os.filter((o) => o.camp_id === campId && o.status === 'delivered').slice(-3)))
+      .then((os) => setDelivered(os.filter((o) => o.camp_id === campId && o.status === 'delivered').slice(-5).reverse()))
       .catch(() => setDelivered([]))
   }, [campId, deliveredKey])
 
@@ -134,11 +134,16 @@ export function CampView({ campId }: { campId: string }) {
     () => Object.values(reports).filter((r) => r.camp_id === campId).sort((a, b) => b.id.localeCompare(a.id, undefined, { numeric: true })),
     [reports, campId],
   )
+  const match = useCallback((e: LogEntry) => e.refs.camp_ids.includes(campId), [campId])
   const incoming = Object.values(trucks).filter((t) => t.job?.camp_id === campId && t.job.status === 'dispatched')
-  if (!def || !camp) return <PhoneFrame caption="">Loading…</PhoneFrame>
+  const node = scenario?.nodes.find((n) => n.id === def?.node_id)
+  if (!def || !camp || !node) return <div className="flex flex-1 items-center justify-center text-slate-400">Loading…</div>
+  const here: LatLon = [node.lat, node.lon]
   const level = camp.cut_off ? 'cut_off' : camp.status
-  const burn = { water_l: (camp.population ?? def.population) * 3, food_rations: camp.population ?? def.population, medical_kits: (camp.population ?? def.population) / 100 }
+  const pop = camp.population ?? def.population
+  const burn = { water_l: pop * 3, food_rations: pop, medical_kits: pop / 100 }
   const Speech = speechCtor()
+  const truckPts = incoming.map((t) => [t.lat, t.lon] as LatLon)
 
   const send = (t: string) => {
     if (!t.trim()) return
@@ -164,119 +169,138 @@ export function CampView({ campId }: { campId: string }) {
   }
 
   return (
-    <PhoneFrame
-      caption={
-        <>
-          <p className="text-base font-semibold text-slate-200">Camp Coordinator</p>
-          <p className="mt-2">
-            What the coordinator at {shortName(def.name)} sees on their phone. They write the way people write, in English or Assamese.
-            The <span className="text-pink-300">Field Intake agent</span> turns it into structured updates; big changes wait for Command
-            to confirm.
-          </p>
-          <p className="mt-2">Updates appear in the Command feed within a second.</p>
-        </>
-      }
-    >
-      <div className="flex items-center gap-2">
-        <span className="text-lg">⛺</span>
-        <div>
-          <div className="font-semibold text-white">{def.name}</div>
-          <div className="text-[11px] text-slate-400">
-            {fmtNum(camp.population ?? def.population)} people · {def.district} · {sim?.sim_time}
-          </div>
-        </div>
-        <span className="ml-auto rounded px-2 py-0.5 text-[10px] font-bold uppercase" style={{ background: `${CAMP_COLORS[level]}33`, color: CAMP_COLORS[level] }} data-testid="camp-status">
+    <RolePage
+      icon="⛺"
+      role="Camp Coordinator"
+      title={def.name}
+      meta={`${def.district} · ${shortName(def.name)} · ${sim?.sim_time ?? ''}`}
+      badge={
+        <span
+          className="rounded-md px-2.5 py-1 text-xs font-bold uppercase"
+          style={{ background: `${CAMP_COLORS[level]}26`, color: CAMP_COLORS[level] }}
+          data-testid="camp-status"
+        >
           {camp.cut_off ? 'cut off' : camp.status}
         </span>
-      </div>
-      {camp.unserved_reason && <Card tone="bad">{camp.unserved_reason}</Card>}
-
-      <Card title="Supplies left">
-        {(Object.keys(ITEM_LABEL) as (keyof Supplies)[]).map((k) => {
-          const days = burn[k] ? camp.stock[k] / burn[k] : 0
-          const color = days < 0.5 ? CAMP_COLORS.critical : days < 1 ? CAMP_COLORS.low : CAMP_COLORS.ok
-          return (
-            <div key={k} className="mt-1 flex items-center gap-2 text-xs">
-              <span className="w-24 text-slate-300">{ITEM_LABEL[k]}</span>
-              <span className="h-2 flex-1 rounded bg-slate-800">
-                <span className="block h-2 rounded" style={{ width: `${Math.min(100, (days / 1.5) * 100)}%`, background: color }} />
-              </span>
-              <span className="w-16 text-right tabular-nums text-slate-300">{days.toFixed(1)} d</span>
-            </div>
-          )
-        })}
-      </Card>
-
-      <Card title="Incoming trucks">
-        {incoming.length === 0 && <div className="text-xs text-slate-500">None on the way right now.</div>}
-        {incoming.map((t) => (
-          <div key={t.id} className="mt-1 text-xs text-slate-200">
-            🚚 {t.id} · {t.job ? fmtItems(t.job.items) : ''}
-            <div className="text-[11px] text-slate-400">
-              {t.status === 'loading' ? 'loading' : 'on the road'}
-              {t.eta_sim_seconds && sim ? ` · ETA ${fmtDuration((t.eta_sim_seconds - sim.sim_seconds) / 60)}` : ''}
-            </div>
-          </div>
-        ))}
-      </Card>
-
-      {((camp.urgent_needs ?? []).length > 0 || (camp.health_flags ?? []).length > 0) && (
-        <Card title="Flagged to Command" tone="warn">
-          {(camp.urgent_needs ?? []).map((n) => (
-            <div key={n} className="text-xs text-amber-200">• Need: {n}</div>
-          ))}
-          {(camp.health_flags ?? []).map((n) => (
-            <div key={n} className="text-xs text-red-200">• Health: {n}</div>
-          ))}
-        </Card>
-      )}
-
-      <Card title="Send field report">
-        <textarea
-          className="h-24 w-full rounded-lg border border-slate-700 bg-slate-900 p-2 text-sm text-slate-100"
-          placeholder="What's happening at the camp? (English or অসমীয়া)"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          data-testid="report-text"
-        />
-        <div className="mt-1 flex flex-wrap gap-1">
-          {examples
-            .filter((x) => x.camp_id === campId)
-            .map((x) => (
-              <button key={x.id} className="btn-chip" onClick={() => setText(x.text)} title={x.translation}>
-                Example: {x.lang === 'as' ? 'অসমীয়া' : 'English'}
-              </button>
-            ))}
-          {Speech && (
-            <>
-              <button className="btn-chip" disabled={listening} onClick={() => listen('en-IN')}>
-                🎤 EN
-              </button>
-              <button className="btn-chip" disabled={listening} onClick={() => listen('as-IN')}>
-                🎤 অসমীয়া
-              </button>
-            </>
-          )}
-        </div>
-        <button className="btn-primary mt-2 w-full py-2" disabled={sending || !text.trim()} onClick={() => send(text)} data-testid="send-report">
-          {sending ? 'Field Intake AI is reading…' : 'Send report'}
-        </button>
-        {health && health.llm_provider === 'mock' && (
-          <p className="mt-1 text-[10px] text-slate-500">
-            Offline mode: the two example reports use recorded AI readings; other text is flagged for a human (needs an API key).
-          </p>
+      }
+      about="Write the way people write, in English or Assamese. The Field Intake agent turns it into structured updates; big changes wait for Command to confirm."
+    >
+      <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-4 p-6 lg:grid-cols-12">
+        {camp.unserved_reason && (
+          <div className="rounded-xl border border-red-500/50 bg-red-950/40 px-4 py-3 text-sm text-red-200 lg:col-span-12">{camp.unserved_reason}</div>
         )}
-        {mine.map((r) => (
-          <ReportCard key={r.id} r={r} />
-        ))}
-      </Card>
 
-      <Card title="Deliveries received">
-        {delivered.length === 0 && <div className="text-xs text-slate-500">No deliveries yet.</div>}
-        {delivered.map((o) => (
-          <DeliveryCheck key={o.id} o={o} />
-        ))}
-      </Card>
-    </PhoneFrame>
+        <div className="grid grid-cols-2 gap-4 lg:col-span-12 lg:grid-cols-4">
+          <Stat label="People in camp" value={fmtNum(pop)} sub={`${def.district} district`} />
+          {(Object.keys(ITEM_LABEL) as (keyof Supplies)[]).map((k) => {
+            const days = burn[k] ? camp.stock[k] / burn[k] : 0
+            const color = days < 0.5 ? CAMP_COLORS.critical : days < 1 ? CAMP_COLORS.low : CAMP_COLORS.ok
+            return (
+              <Stat
+                key={k}
+                label={`${ITEM_LABEL[k]} left`}
+                value={`${days.toFixed(1)} days`}
+                color={color}
+                pct={(days / 1.5) * 100}
+                sub={`${fmtNum(camp.stock[k])} in stock · uses ${fmtNum(burn[k])}/day`}
+              />
+            )
+          })}
+        </div>
+
+        <div className="flex flex-col gap-4 lg:col-span-7">
+          <Panel title="Send field report" action={<span className="text-xs text-pink-300">Field Intake AI</span>}>
+            <textarea
+              className="h-32 w-full rounded-lg border border-slate-700 bg-slate-950 p-3 text-sm text-slate-100 focus:border-sky-500 focus:outline-none"
+              placeholder="What's happening at the camp? (English or অসমীয়া)"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              data-testid="report-text"
+            />
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {examples
+                .filter((x) => x.camp_id === campId)
+                .map((x) => (
+                  <button key={x.id} className="btn-chip" onClick={() => setText(x.text)} title={x.translation}>
+                    Example: {x.lang === 'as' ? 'অসমীয়া' : 'English'}
+                  </button>
+                ))}
+              {Speech && (
+                <>
+                  <button className="btn-chip" disabled={listening} onClick={() => listen('en-IN')}>
+                    🎤 EN
+                  </button>
+                  <button className="btn-chip" disabled={listening} onClick={() => listen('as-IN')}>
+                    🎤 অসমীয়া
+                  </button>
+                </>
+              )}
+              <button className="btn-primary ml-auto px-6 py-2" disabled={sending || !text.trim()} onClick={() => send(text)} data-testid="send-report">
+                {sending ? 'Field Intake AI is reading…' : 'Send report'}
+              </button>
+            </div>
+            {health && health.llm_provider === 'mock' && (
+              <p className="mt-2 text-xs text-slate-500">
+                Offline mode: the example reports use recorded AI readings; other text is flagged for a human (needs an API key).
+              </p>
+            )}
+          </Panel>
+
+          <Panel title={`Reports from this camp (${mine.length})`}>
+            {mine.length === 0 && <div className="text-sm text-slate-500">No reports sent yet.</div>}
+            <div className="space-y-3">
+              {mine.map((r) => (
+                <ReportCard key={r.id} r={r} />
+              ))}
+            </div>
+          </Panel>
+
+          <Panel title="Deliveries received">
+            {delivered.length === 0 && <div className="text-sm text-slate-500">No deliveries yet.</div>}
+            <div className="space-y-3">
+              {delivered.map((o) => (
+                <DeliveryCheck key={o.id} o={o} />
+              ))}
+            </div>
+          </Panel>
+        </div>
+
+        <div className="flex flex-col gap-4 lg:col-span-5">
+          <FocusMap focus={[here, ...truckPts]} ring={here} className="h-80" />
+
+          <Panel title={`Incoming trucks (${incoming.length})`}>
+            {incoming.length === 0 && <div className="text-sm text-slate-500">None on the way right now.</div>}
+            <table className="w-full text-sm">
+              <tbody>
+                {incoming.map((t) => (
+                  <tr key={t.id} className="border-b border-slate-800 last:border-0">
+                    <td className="py-2 font-semibold text-white">🚚 {t.id}</td>
+                    <td className="py-2 text-slate-300">{t.job ? fmtItems(t.job.items) : ''}</td>
+                    <td className="py-2 text-right text-sky-300">
+                      {t.status === 'loading' ? 'loading' : t.eta_sim_seconds && sim ? `ETA ${fmtDuration((t.eta_sim_seconds - sim.sim_seconds) / 60)}` : 'on the road'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Panel>
+
+          {((camp.urgent_needs ?? []).length > 0 || (camp.health_flags ?? []).length > 0) && (
+            <Panel title="Flagged to Command" tone="warn">
+              {(camp.urgent_needs ?? []).map((n) => (
+                <div key={n} className="text-sm text-amber-200">• Need: {n}</div>
+              ))}
+              {(camp.health_flags ?? []).map((n) => (
+                <div key={n} className="text-sm text-red-200">• Health: {n}</div>
+              ))}
+            </Panel>
+          )}
+
+          <Panel title="Activity for this camp">
+            <Activity match={match} empty="No agent activity for this camp yet." />
+          </Panel>
+        </div>
+      </div>
+    </RolePage>
   )
 }

@@ -27,7 +27,7 @@ test('roles: driver alert + ack, Assamese field report + Command confirm, road r
   await page.screenshot({ path: `${SHOTS}/09-driver-view.png` })
 
   // driver reports a landslide on the road ahead (unverified)
-  await page.locator('[data-testid="phone"] button.btn-chip').filter({ hasText: 'NH-29' }).first().click()
+  await page.getByTestId('road-report').locator('button.btn-chip').filter({ hasText: 'NH-29' }).first().click()
   await page.getByTestId('report-landslide').click()
 
   // --- Command sees the ack within 2 s, and the unverified report needing a check

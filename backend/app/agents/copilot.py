@@ -13,6 +13,7 @@ from typing import Any
 
 from app.geo.graph import RoadGraph
 from app.llm.client import LLMClient, LLMError, ToolSpec, display_name
+from app.llm.journal import purpose
 from app.sim.world import WorldState
 
 COPILOT_SYSTEM = """You are "Ask RahatNet", the copilot for the District Disaster Management Officer
@@ -276,7 +277,8 @@ def ask(llm: LLMClient, f: Frozen, question: str) -> dict[str, Any]:
         + f"\n\nQUESTION: {question.strip()[:500]}"
     )
     try:
-        r = llm.run_tools(COPILOT_SYSTEM, user, tools.specs(), max_turns=6, max_tokens=2000)
+        with purpose("copilot", question=question.strip()[:500], sim_time=f.sim_time):
+            r = llm.run_tools(COPILOT_SYSTEM, user, tools.specs(), max_turns=6, max_tokens=2000)
     except LLMError as exc:
         return {
             "answer": f"The copilot couldn't answer: {exc}.",
@@ -285,4 +287,10 @@ def ask(llm: LLMClient, f: Frozen, question: str) -> dict[str, Any]:
             "latency_ms": None,
             "error": True,
         }
-    return {"answer": r.text, "tools_used": r.tool_calls, "model": display_name(r.model), "latency_ms": r.latency_ms}
+    return {
+        "answer": r.text,
+        "tools_used": r.tool_calls,
+        "model": display_name(r.model),
+        "latency_ms": r.latency_ms,
+        "call_id": r.call_id,
+    }

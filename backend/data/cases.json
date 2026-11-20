@@ -1,0 +1,149 @@
+[
+  {
+    "id": "highway",
+    "title": "Highway flood",
+    "tagline": "A national highway goes under with a truck already on it.",
+    "story": "NH-715 floods at Kaziranga at 07:15 while Truck T3 is driving on it. The Majuli ferry stops at 11:00, Morigaon is cut off at 15:30, and NH-715 reopens at 20:00.",
+    "watch": [
+      "T3 re-routed around NH-715 the moment it floods, and the driver's alert",
+      "Morigaon's order recalled when the camp is cut off (flagged for a boat or air drop)",
+      "Static trucks waiting at the flood until it reopens"
+    ],
+    "timeline": [
+      {
+        "at": "D1 07:15",
+        "action": "hazard_add",
+        "preset_id": "F1"
+      },
+      {
+        "at": "D1 11:00",
+        "action": "hazard_add",
+        "preset_id": "F3"
+      },
+      {
+        "at": "D1 13:00",
+        "action": "weather_check"
+      },
+      {
+        "at": "D1 15:30",
+        "action": "hazard_add",
+        "preset_id": "F2"
+      },
+      {
+        "at": "D1 20:00",
+        "action": "hazard_remove",
+        "preset_id": "F1"
+      },
+      {
+        "at": "D2 06:00",
+        "action": "end"
+      }
+    ]
+  },
+  {
+    "id": "northbank",
+    "title": "North bank cut off",
+    "tagline": "Two rivers split the north bank from the rest of Assam.",
+    "story": "The Subansiri closes NH-15 near Gohpur at 08:00. At 10:30, 1,500 people from Jiadhal-flooded villages reach the Dhemaji camp. The Jia Bharali floods the Kaliabor–Tezpur road at 12:00, the Majuli ferry stops at 13:30, and both rivers recede in the evening.",
+    "watch": [
+      "Dhemaji's 1,500 new arrivals re-planned within minutes; the bigger load waits for the officer",
+      "New orders avoid the closed roads; the static plan's trucks wait at them",
+      "Honest gap: one truck is stranded for hours when the Majuli ferry stops and no safe road is left"
+    ],
+    "timeline": [
+      {
+        "at": "D1 08:00",
+        "action": "hazard_add",
+        "preset_id": "F4"
+      },
+      {
+        "at": "D1 10:30",
+        "action": "population_change",
+        "camp_id": "C5",
+        "delta": 1500,
+        "note": "families from villages flooded by the Jiadhal river"
+      },
+      {
+        "at": "D1 12:00",
+        "action": "hazard_add",
+        "preset_id": "F5"
+      },
+      {
+        "at": "D1 13:30",
+        "action": "hazard_add",
+        "preset_id": "F3"
+      },
+      {
+        "at": "D1 19:00",
+        "action": "hazard_remove",
+        "preset_id": "F5"
+      },
+      {
+        "at": "D1 21:00",
+        "action": "hazard_remove",
+        "preset_id": "F4"
+      },
+      {
+        "at": "D2 06:00",
+        "action": "end"
+      }
+    ]
+  },
+  {
+    "id": "surge",
+    "title": "Lower Assam surge",
+    "tagline": "Camps fill up faster than the supplies can follow.",
+    "story": "The Beki river rises: 2,500 more people reach the Barpeta camp at 08:00 and 1,500 reach Goalpara at 10:00. The Nalbari–Barpeta road floods at 12:00 and reopens at 17:00. A relief consignment reaches the Guwahati hub at 14:00, and Morigaon is cut off at 18:00.",
+    "watch": [
+      "Barpeta and Goalpara re-planned as people arrive; big loads need the officer's approval",
+      "Barpeta's order recalled the moment its only road floods (flagged for a boat or air drop)",
+      "The 14:00 consignment triggers an immediate re-plan"
+    ],
+    "timeline": [
+      {
+        "at": "D1 08:00",
+        "action": "population_change",
+        "camp_id": "C1",
+        "delta": 2500,
+        "note": "families displaced by the Beki river"
+      },
+      {
+        "at": "D1 10:00",
+        "action": "population_change",
+        "camp_id": "C8",
+        "delta": 1500,
+        "note": "families from low-lying villages near Goalpara"
+      },
+      {
+        "at": "D1 12:00",
+        "action": "hazard_add",
+        "preset_id": "F6"
+      },
+      {
+        "at": "D1 14:00",
+        "action": "stock_arrival",
+        "warehouse_id": "W1",
+        "items": {
+          "water_l": 40000,
+          "food_rations": 12000,
+          "medical_kits": 300
+        },
+        "note": "relief consignment (simulated)"
+      },
+      {
+        "at": "D1 17:00",
+        "action": "hazard_remove",
+        "preset_id": "F6"
+      },
+      {
+        "at": "D1 18:00",
+        "action": "hazard_add",
+        "preset_id": "F2"
+      },
+      {
+        "at": "D2 06:00",
+        "action": "end"
+      }
+    ]
+  }
+]

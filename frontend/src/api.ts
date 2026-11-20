@@ -2,10 +2,13 @@ import { getSession, setSession, type Session, type User } from './auth'
 import type {
   AfterActionReport,
   ApprovalPolicy,
+  DemoCase,
   DemoReport,
   FieldReport,
   Hazard,
+  HistoryRuns,
   KpiBundle,
+  LLMCall,
   LogEntry,
   Order,
   Scenario,
@@ -46,6 +49,7 @@ export interface Health {
   llm_provider: string
   llm_model: string
   llm_disabled?: string | null
+  db?: string
   weather_mode: string
   demo_inject_fault: boolean
   version: string
@@ -106,9 +110,14 @@ export const api = {
   state: () => req<Snapshot>('GET', '/state'),
   start: () => req<{ running: boolean }>('POST', '/sim/start'),
   pause: () => req<{ running: boolean }>('POST', '/sim/pause'),
-  reset: (demo_timeline = true) => req<Snapshot>('POST', '/sim/reset', { demo_timeline }),
+  reset: (demo_timeline = true, caseId?: string) => req<Snapshot>('POST', '/sim/reset', { demo_timeline, case: caseId }),
   speed: (multiplier: number) => req<{ speed: number }>('POST', '/sim/speed', { multiplier }),
-  runDemo: () => req<{ running: boolean; sim: SimView }>('POST', '/demo/run'),
+  runDemo: (caseId?: string) => req<{ running: boolean; sim: SimView }>('POST', '/demo/run', { case: caseId }),
+  cases: () => req<DemoCase[]>('GET', '/cases'),
+  llmCalls: (limit = 50) => req<LLMCall[]>('GET', `/llm-calls?limit=${limit}`),
+  llmCall: (id: string) => req<LLMCall>('GET', `/llm-calls/${id}`),
+  historyRuns: () => req<HistoryRuns>('GET', '/history/runs'),
+  historyLog: (runId: string) => req<LogEntry[]>('GET', `/history/runs/${runId}/log`),
   trigger: (preset_id: string) => req<Hazard>('POST', '/hazards/trigger', { preset_id }),
   customFlood: (label: string, ring: [number, number][]) =>
     req<Hazard>('POST', '/hazards/custom', {

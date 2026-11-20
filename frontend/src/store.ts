@@ -230,6 +230,7 @@ export const useStore = create<State>((set, get) => ({
             running: p.running,
             speed: p.speed,
             ended: p.ended,
+            held: p.held,
           },
           trucks,
           tickAt: performance.now(),

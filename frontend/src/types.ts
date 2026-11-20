@@ -87,6 +87,10 @@ export interface SimView {
   speed: number
   demo_timeline?: boolean
   ended?: boolean
+  held?: boolean // the clock waits while the AI Coordinator plans
+  case_id?: string
+  run_id?: string | null
+  db?: string
 }
 
 export interface TruckView {
@@ -245,6 +249,62 @@ export interface LogEntry {
   reasoning: string
   refs: LogRefs
   actor?: string | null
+  cycle?: number | null // coordination cycle (trigger → plan → check → dispatch)
+  llm_call?: string | null // the AI conversation behind this entry
+}
+
+export interface DemoCase {
+  id: string
+  title: string
+  tagline: string
+  story: string
+  watch: string[]
+  timeline: { at: string; action: string; [k: string]: unknown }[]
+}
+
+export interface LLMCall {
+  id: string
+  purpose: 'coordinator' | 'field_intake' | 'copilot' | 'report' | 'other'
+  model: string
+  provider: string
+  system?: string
+  user?: string
+  response?: string
+  preview?: string
+  tool_calls: { name: string; input: Record<string, unknown>; result?: string }[]
+  latency_ms: number
+  input_tokens: number
+  output_tokens: number
+  ok: boolean
+  error: string | null
+  meta: Record<string, unknown>
+  created_at: string
+}
+
+export interface HistoryRun {
+  id: string
+  case_id: string
+  case_title: string
+  mode: string
+  llm_provider: string | null
+  llm_model: string | null
+  started_at: string
+  ended_at: string | null
+  last_sim_time: string | null
+  agentic_kpis: KPIs | null
+  baseline_kpis: KPIs | null
+  has_report: boolean
+  entries: number
+  ai_calls: number
+  cycles: number
+}
+
+export interface HistoryRuns {
+  enabled: boolean
+  status: string
+  error?: string
+  current_run?: string | null
+  runs: HistoryRun[]
 }
 
 export interface KPIs {

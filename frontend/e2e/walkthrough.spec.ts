@@ -39,6 +39,8 @@ test('walkthrough: 4 roles in 4 windows, every page, cross-role updates within 2
 
   // 03 Simulation: run the demo (30x while the officer approves the first orders, then 600x)
   await go(o, '/officer/simulation')
+  await expect(o.getByTestId('cases').getByRole('radio')).toHaveCount(3)
+  await o.getByTestId('case-highway').click()
   await o.getByTestId('run-demo').click()
   await api.post('/sim/speed', { multiplier: 30 })
   await expect(o.getByTestId('stat-clock')).toContainText('Running')
@@ -110,8 +112,29 @@ test('walkthrough: 4 roles in 4 windows, every page, cross-role updates within 2
   await expect(o.getByTestId('feed').locator('[data-kind="order.approved"]').first()).toContainText('Ritu Baruah')
   await shot(o, '11-officer-ai-agents')
   await expect(o.getByTestId('coordination-cycle').first()).toBeVisible()
+  // pick a cycle: the agents that took part light up, numbered in order; Replay steps through the hand-offs
+  await o.getByTestId('replay').click()
+  await expect(o.getByTestId('replay-caption')).toBeVisible()
+  await expect(o.locator('[data-testid^="agent-node-"][data-active="true"]').first()).toBeVisible()
+  await o.waitForTimeout(2000)
+  await shot(o, '11-officer-ai-agents-replay')
   await o.getByTestId('coordination-timeline').scrollIntoViewIfNeeded()
   await shot(o, '11b-officer-ai-agents-timeline')
+  // a timeline row opens the cycle in a side panel: every step in order
+  await o.getByTestId('coordination-cycle').first().click()
+  await expect(o.getByTestId('detail-sheet')).toBeVisible()
+  await expect(o.getByTestId('cycle-steps').locator('li').nth(1)).toBeVisible()
+  await o.waitForTimeout(700) // slide-in animation
+  await shot(o, '11c-officer-cycle-detail')
+  await o.keyboard.press('Escape')
+  await expect(o.getByTestId('detail-sheet')).toBeHidden()
+  // a decision-log row opens the entry: reasoning, references, its cycle
+  await o.getByTestId('log-row').first().click()
+  await expect(o.getByTestId('detail-sheet')).toBeVisible()
+  await expect(o.getByTestId('open-cycle')).toBeVisible()
+  await o.waitForTimeout(700)
+  await shot(o, '11d-officer-log-entry')
+  await o.keyboard.press('Escape')
   await go(o, '/officer/ask')
   await o.getByTestId('copilot-example').first().click()
   await expect(o.getByTestId('copilot-answer').first()).toContainText(/API key|needs/i)

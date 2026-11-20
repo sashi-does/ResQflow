@@ -1,6 +1,7 @@
 import os
 
 os.environ["LLM_PROVIDER"] = "mock"  # tests are deterministic: never call a real LLM even if .env sets one
+os.environ["DATABASE_URL"] = ""  # tests never write to the history database
 
 import pytest  # noqa: E402
 

@@ -192,7 +192,13 @@ function Clock() {
       <span className="font-semibold text-slate-900 tnum" data-testid="sim-time">
         {sim?.sim_time ?? '—'}
       </span>
-      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold tracking-wider text-slate-600 uppercase">Simulation</span>
+      {sim?.held && sim.running ? (
+        <span className="animate-pulse rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-semibold tracking-wider text-brand-800 uppercase" title="The clock waits while the AI Coordinator plans" data-testid="clock-held">
+          AI planning
+        </span>
+      ) : (
+        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold tracking-wider text-slate-600 uppercase">Simulation</span>
+      )}
     </div>
   )
 }

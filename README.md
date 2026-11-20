@@ -104,8 +104,32 @@ supplies 110.7 t vs 93.0 t; on-time 75% vs 87% and average delivery time are wor
 Majuli and Morigaon is cut off at 15:30 with too little water), can make RahatNet only slightly better than the static plan
 on water and worse on food. The comparison is computed by code from the run, never edited.
 
+## Three demo cases
+
+Same map, warehouses, camps and trucks; a different flood day each time (**Simulation → Choose a case**, or
+`uv run python scripts/run_headless.py --case <id>`). Headless, offline planner, seed 42:
+
+| Case | What happens | People-hours without water (RahatNet vs static) | Truck-hours stuck |
+|---|---|---:|---:|
+| `highway` · Highway flood | NH-715 floods under Truck T3; Majuli ferry stops; Morigaon cut off | 3,952 vs 22,582 (−82%) | 0 vs 26.9 |
+| `northbank` · North bank cut off | Subansiri and Jia Bharali floods split the north bank; 1,500 people reach Dhemaji | 0 vs 7,252 (−100%) | 7.0 vs 11.4 |
+| `surge` · Lower Assam surge | 4,000 more people at Barpeta and Goalpara; Barpeta's road floods; a consignment arrives | 22,425 vs 37,227 (−40%) | 0 vs 14.3 |
+
+Honest gaps: in `northbank` one truck is stranded ~7 h when the Majuli ferry stops and no safe road is left; in `surge`
+food is not better (Barpeta is cut off for 5 hours in both runs).
+
+## Seeing the agents coordinate, and keeping history
+
+- Every decision-log entry belongs to a **coordination cycle** (what changed → the plan → its checks → dispatch → approvals).
+  **AI Agents** lights up the agents of a cycle in the order they acted and can **Replay** it; clicking a cycle or a log
+  entry opens a side panel with every step and the **AI conversation** behind it (what the agent sent, what the model answered).
+- With `DATABASE_URL` (Postgres) set, every run, log entry, cycle, AI conversation, field report and hourly KPI snapshot is
+  saved by a background writer (**Reports → Saved runs**). Unset or unreachable: memory only, nothing breaks.
+- In the live dashboard the clock **waits while the AI plans** (both runs pause, so the comparison stays fair). Routine
+  hourly re-plans use the instant rule-based planner; the AI is asked when something changes.
+
 ## Caveats
-- Map tiles (Esri World Dark Gray) need an internet connection. Everything else runs offline with no keys.
+- Map tiles (Esri World Light Gray) need an internet connection. Everything else runs offline with no keys.
 - Road geometry is straight-line between towns (deterministic, so flood tests are reproducible).
 - `DEMO_INJECT_FAULT=true` (off by default) corrupts exactly one coordinator plan per demo run, so the validator's
   rejection-and-retry is visible on camera. It is labelled "[demo]" in the feed. It can also be toggled on the officer's Simulation page.

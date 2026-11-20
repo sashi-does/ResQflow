@@ -41,6 +41,7 @@ def parse_duration(s: str) -> int:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--scenario", default="assam")
+    ap.add_argument("--case", default="highway", help="highway | northbank | surge (data/cases.json)")
     ap.add_argument("--until", default="24h")
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--no-timeline", action="store_true")
@@ -58,7 +59,7 @@ def main() -> None:
     llm = make_llm(settings) if args.llm else None
     if args.llm and (llm is None or not llm.available):
         print("--llm: no ANTHROPIC_API_KEY found (.env); running in mock mode", file=sys.stderr)
-    sc = load_scenario(args.scenario)
+    sc = load_scenario(args.scenario, args.case)
     cmp_ = build_comparison(settings, scenario=sc, timeline=not args.no_timeline, headless=True, llm=llm)
     t0 = time.perf_counter()
     cmp_.run_until(parse_duration(args.until))
@@ -68,7 +69,8 @@ def main() -> None:
     lo = parse_sim_time(args.t_from, sc.start_offset_s) if args.t_from else -1
     hi = parse_sim_time(args.t_to, sc.start_offset_s) if args.t_to else 10**9
     mode = f"LLM: {llm.model}" if llm is not None and llm.available else "mock coordinator"
-    print(f"== {sc.raw['name']} · ran to {world.sim_time} in {elapsed:.2f}s ({mode}) ==")
+    case = sc.raw["case"]["title"]
+    print(f"== {sc.raw['name']} · case: {case} · ran to {world.sim_time} in {elapsed:.2f}s ({mode}) ==")
     if not args.quiet:
         for e in world.bus.entries:
             if lo <= e.sim_seconds <= hi:

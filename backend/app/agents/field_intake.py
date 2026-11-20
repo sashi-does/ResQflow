@@ -20,6 +20,7 @@ from pydantic import ValidationError
 from app.auth.context import who
 from app.config import DATA_DIR
 from app.llm.client import LLMClient, LLMError, display_name
+from app.llm.journal import purpose
 from app.llm.prompts import FIELD_INTAKE_SCHEMA, FIELD_INTAKE_SYSTEM
 from app.models import ITEMS, Camp, FieldReport, ParsedReport, Supplies
 from app.sim.world import WorldState
@@ -46,6 +47,7 @@ class ParseOutcome:
     model: str | None
     latency_ms: int | None
     error: str | None = None
+    call_id: str | None = None
 
 
 class FieldIntakeAgent:
@@ -67,11 +69,15 @@ class FieldIntakeAgent:
                 },
                 ensure_ascii=False,
             )
+            res = None
             try:
-                res = self.llm.complete_json(FIELD_INTAKE_SYSTEM, user, FIELD_INTAKE_SCHEMA, max_tokens=1500)
-                return ParseOutcome(ParsedReport.model_validate(res.data), "llm", res.model, res.latency_ms)
+                with purpose("field_intake", camp=camp_name):
+                    res = self.llm.complete_json(FIELD_INTAKE_SYSTEM, user, FIELD_INTAKE_SCHEMA, max_tokens=1500)
+                parsed = ParsedReport.model_validate(res.data)
+                return ParseOutcome(parsed, "llm", res.model, res.latency_ms, call_id=res.call_id)
             except (LLMError, ValidationError) as exc:
-                return ParseOutcome(None, "none", self.llm.model, None, str(exc).splitlines()[0])
+                cid = res.call_id if res is not None else None
+                return ParseOutcome(None, "none", self.llm.model, None, str(exc).splitlines()[0], call_id=cid)
         rec = self._recorded.get(_norm(text))
         if rec:
             return ParseOutcome(ParsedReport.model_validate(rec["recorded"]), "recorded", None, 0)
@@ -82,6 +88,7 @@ class FieldIntakeAgent:
         camp = world.camps[report.camp_id]
         report.parsed, report.source = outcome.parsed, outcome.source  # type: ignore[assignment]
         report.model, report.latency_ms = outcome.model, outcome.latency_ms
+        report.llm_call = outcome.call_id
         who = self._who(outcome)
         if outcome.parsed is None:
             report.status = "unparsed"
@@ -92,6 +99,7 @@ class FieldIntakeAgent:
                 f"Field report from {camp.name} could not be parsed and is flagged for Command to read.",
                 f'"{report.text}"\n{report.reasons[0]}',
                 camp_ids=[camp.id],
+                llm_call=report.llm_call,
             )
             return report
         p = outcome.parsed
@@ -109,6 +117,7 @@ class FieldIntakeAgent:
                 f'"{report.text}"\nProposed: {", ".join(report.changes) or "no number changes"}.{notes} '
                 f"Confidence {p.confidence:.0%}.",
                 camp_ids=[camp.id],
+                llm_call=report.llm_call,
             )
         else:
             report.status = "applied"
@@ -121,6 +130,7 @@ class FieldIntakeAgent:
                 f'"{report.text}"\nConfidence {p.confidence:.0%}. Population changes up to {BIG_POP_CHANGE:.0%} and '
                 "notes are applied automatically; bigger changes wait for Command.",
                 camp_ids=[camp.id],
+                llm_call=report.llm_call,
             )
         return report
 

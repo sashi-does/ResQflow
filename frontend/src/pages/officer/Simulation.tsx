@@ -1,4 +1,5 @@
-import { Clock, FastForward, FlaskConical, Pause, PenLine, Play, RotateCcw, Waves, Workflow } from 'lucide-react'
+import { Check, Clock, FastForward, FlaskConical, Pause, PenLine, Play, RotateCcw, Waves, Workflow } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
@@ -9,6 +10,7 @@ import { OpsMap } from '../../components/app/OpsMap'
 import { useKeyboardShortcuts } from '../../hooks'
 import { PRESET_BUTTONS } from '../../lib/presets'
 import { useStore } from '../../store'
+import type { DemoCase } from '../../types'
 
 const SPEEDS = [30, 120, 600]
 
@@ -27,6 +29,14 @@ export function OfficerSimulation() {
   const active = new Set(hazards.map((h) => h.preset_id))
   const floods = hazards.filter((h) => h.kind !== 'rain_advisory').length
   const preset = (id: string) => scenario?.presets.find((p) => p.id === id)
+  const [cases, setCases] = useState<DemoCase[]>([])
+  const [chosen, setChosen] = useState<string | null>(null)
+  useEffect(() => {
+    api.cases().then(setCases, () => undefined)
+  }, [])
+  const caseId = chosen ?? sim?.case_id ?? 'highway'
+  const current = cases.find((c) => c.id === caseId)
+  const run = () => api.runDemo(caseId).then(() => toast(`Running case: ${current?.title ?? caseId}`, 'ok'), fail)
 
   return (
     <PageGrid>
@@ -37,10 +47,46 @@ export function OfficerSimulation() {
         <StatCard label="Faulty-plan demo" value={health?.demo_inject_fault ? 'On' : 'Off'} sub="shows the safety check" icon={Workflow} tone={health?.demo_inject_fault ? 'amber' : 'blue'} />
       </StatGrid>
 
-      <Section title="Scenario" description="Run Demo resets the world and starts the scripted Assam timeline (Kaziranga floods at 07:15)." className="lg:col-span-5" testId="sim-controls">
+      <Section title="Choose a case" description="Same map, camps and six trucks; a different flood day each time. Run Demo starts the chosen case from D1 06:00." className="lg:col-span-12">
+        <div className="grid gap-3 md:grid-cols-3" role="radiogroup" aria-label="Demo case" data-testid="cases">
+          {cases.map((c, i) => {
+            const on = c.id === caseId
+            const running = c.id === sim?.case_id
+            return (
+              <button
+                key={c.id}
+                role="radio"
+                aria-checked={on}
+                onClick={() => setChosen(c.id)}
+                className={cn('relative rounded-lg border p-4 text-left transition-colors', on ? 'border-brand-600 bg-brand-50/60 ring-1 ring-brand-600' : 'border-slate-200 hover:border-brand-300')}
+                data-testid={`case-${c.id}`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-500 tnum">Case {i + 1}</span>
+                  {running && <span className="rounded bg-slate-100 px-1.5 text-[10px] font-semibold text-slate-600 uppercase">loaded</span>}
+                  {on && <Check className="ml-auto size-4 text-brand-700" aria-hidden />}
+                </div>
+                <div className="mt-1 font-semibold text-slate-900">{c.title}</div>
+                <p className="mt-1 text-sm text-slate-600">{c.tagline}</p>
+                <p className="mt-2 text-xs leading-relaxed text-slate-500">{c.story}</p>
+                <ul className="mt-3 space-y-1 text-xs text-slate-700">
+                  {c.watch.map((w) => (
+                    <li key={w} className="flex gap-1.5">
+                      <span className="mt-1.5 size-1 shrink-0 rounded-full bg-brand-600" aria-hidden />
+                      {w}
+                    </li>
+                  ))}
+                </ul>
+              </button>
+            )
+          })}
+        </div>
+      </Section>
+
+      <Section title="Scenario" description={`Run Demo resets the world and starts “${current?.title ?? 'the chosen case'}”. While the AI plans, the clock waits for it.`} className="lg:col-span-5" testId="sim-controls">
         <div className="space-y-5">
           <div className="flex flex-wrap gap-2">
-            <Button size="lg" onClick={() => api.runDemo().then(() => toast('Demo started: the Assam flood scenario is running', 'ok'), fail)} data-testid="run-demo">
+            <Button size="lg" onClick={run} data-testid="run-demo">
               <FlaskConical /> Run Demo
             </Button>
             {sim?.running ? (
@@ -52,7 +98,7 @@ export function OfficerSimulation() {
                 <Play /> Play
               </Button>
             )}
-            <Button size="lg" variant="ghost" onClick={() => api.reset(true).then(() => toast('World reset to D1 06:00', 'info'), fail)}>
+            <Button size="lg" variant="ghost" onClick={() => api.reset(true, caseId).then(() => toast('World reset to D1 06:00', 'info'), fail)}>
               <RotateCcw /> Reset
             </Button>
           </div>

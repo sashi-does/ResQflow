@@ -18,11 +18,13 @@ from app.auth.context import who
 from app.config import Settings
 from app.geo.hazards import hazard_from_preset
 from app.llm.client import display_name, make_llm
+from app.llm.journal import JOURNAL
 from app.models import ApprovalPolicy, Camp, FieldReport, Hazard, Supplies
+from app.persist import Store
 from app.sim import alerts as camp_alerts
 from app.sim.clock import ALLOWED_SPEEDS, STEP_S, TICK_REAL_S, SimClock
 from app.sim.comparison import Comparison, build_comparison
-from app.sim.scenario import load_scenario
+from app.sim.scenario import DEFAULT_CASE, get_case, load_scenario
 from app.sim.world import WorldState
 from app.text import fmt_items, fmt_signed
 
@@ -41,19 +43,37 @@ class LiveSim:
         self.demo_timeline = True
         self.policy = ApprovalPolicy()
         self.llm = make_llm(settings)
+        self.store = Store(settings.database_url)
+        self.store.start()
+        self.run_id: str | None = None
+        JOURNAL.sink = lambda call: self.store.llm_call(self.run_id, call.as_dict())
+        self.case_id = DEFAULT_CASE
         self._task: asyncio.Task | None = None
         self._ticks = 0
         self.reset(demo_timeline=True)
 
     # ------------------------------------------------------------ lifecycle
-    def reset(self, demo_timeline: bool = True) -> None:
+    def reset(self, demo_timeline: bool = True, case: str | None = None) -> None:
         old = getattr(self, "cmp", None)
         if old is not None:
             old.agentic.policy.coordinator.shutdown()  # type: ignore[attr-defined]
         self.demo_timeline = demo_timeline
+        if case is not None:
+            get_case(case)  # KeyError for an unknown case
+            self.case_id = case
+        sc = load_scenario(case=self.case_id)
         self.cmp: Comparison = build_comparison(
-            self.settings, timeline=demo_timeline, headless=False, policy=self.policy, llm=self.llm
+            self.settings, scenario=sc, timeline=demo_timeline, headless=False, policy=self.policy, llm=self.llm
         )
+        self.run_id = self.store.new_run(
+            case_id=self.case_id,
+            case_title=sc.raw["case"]["title"] if demo_timeline else "Free play (no scripted events)",
+            mode="live",
+            seed=self.settings.seed,
+            provider=self.settings.effective_llm_provider if self.llm.available else "mock",
+            model=self.llm.model if self.llm.available else "heuristic",
+        )
+        self._ended_saved = False
         self.world.bus.subscribe(self._on_event)
         self.clock.running = False
         self.clock.reset()
@@ -97,14 +117,26 @@ class LiveSim:
             if self.cmp.agentic.ended:
                 self.clock.running = False
                 break
+            if self.orch.poll_plan(self.world):
+                break  # the clock waits while the AI plans: both runs pause, so the comparison stays fair
             self.cmp.step()
         bucket = self.world.sim_seconds // KPI_EVERY_S
         if bucket != self._last_kpi_bucket:
             self._last_kpi_bucket = bucket
-            self.broadcast("kpis", self.cmp.kpis())
+            k = self.cmp.kpis()
+            self.broadcast("kpis", k)
+            if self.world.sim_seconds % 3600 < KPI_EVERY_S and self.run_id:  # hourly history
+                self.store.kpis(self.run_id, self.world.sim_seconds, self.world.sim_time, k["agentic"], k["baseline"])
         if self.cmp.agentic.ended:
             self.clock.running = False
+            self._save_end(None)
             self._schedule_report()
+
+    def _save_end(self, report: dict[str, Any] | None) -> None:
+        if self.run_id and (report is not None or not self._ended_saved):
+            self._ended_saved = True
+            k = self.cmp.kpis()
+            self.store.end_run(self.run_id, self.world.sim_time, k["agentic"], k["baseline"], report)
 
     def _schedule_report(self) -> None:
         """Scenario over: write the after-action report once, in the background (needs a running event loop)."""
@@ -129,6 +161,7 @@ class LiveSim:
             self.report["narrative_note"],
         )
         self.broadcast("report.ready", self.report)
+        self._save_end(self.report)
         return self.report
 
     # ------------------------------------------------------------ accessors
@@ -169,6 +202,8 @@ class LiveSim:
         self.clients.discard(q)
 
     def broadcast(self, type_: str, payload: dict[str, Any]) -> None:
+        if type_ in ("field_report.created", "field_report.updated") and self.run_id:
+            self.store.field_report(self.run_id, payload)
         msg = {"type": type_, "payload": payload}
         for q in list(self.clients):
             try:
@@ -177,11 +212,14 @@ class LiveSim:
                 self.clients.discard(q)
 
     def _on_event(self, type_: str, payload: dict[str, Any]) -> None:
+        if type_ == "log" and self.run_id:
+            self.store.log_entry(self.run_id, payload)
         if type_ == "truck.rerouted":
             self.pending_reroute[payload["truck_id"]] = {
                 "message": payload.get("message", ""),
                 "at": self.world.sim_time,
                 "new_eta_sim_seconds": payload.get("new_eta_sim_seconds"),
+                "cycle": self.world.bus.forced_cycle or self.world.bus.open_cycle,  # the re-route's cycle
             }
         self.broadcast(type_, payload)
         self._maybe_alert(type_, payload)
@@ -297,6 +335,7 @@ class LiveSim:
             "driver.ack",
             f"{who(f'The driver of Truck {truck_id}')} acknowledged: {what}",
             truck_ids=[truck_id],
+            cycle=pending.get("cycle") if pending else None,  # the answer belongs with the re-route it answers
         )
         self.broadcast("truck.ack", {"truck_id": truck_id, "sim_time": self.world.sim_time})
         return {"ok": True}
@@ -621,7 +660,11 @@ class LiveSim:
             "running": self.clock.running,
             "speed": self.clock.speed,
             "demo_timeline": self.demo_timeline,
+            "case_id": self.case_id,
+            "run_id": self.run_id,
+            "db": self.store.status,
             "ended": self.cmp.agentic.ended,
+            "held": self.orch.coordinator.busy,
             "step_s": STEP_S,
         }
 
@@ -666,6 +709,7 @@ class LiveSim:
             "running": self.clock.running,
             "speed": self.clock.speed,
             "ended": self.cmp.agentic.ended,
+            "held": self.orch.coordinator.busy,
             "trucks": [self.truck_view(t) for t in sorted(w.trucks)],  # full views: role pages are live from WS
             "camps": [self.camp_view(c) for c in w.camps.values()],
             "warehouses": [self.warehouse_view(x) for x in sorted(w.warehouses)],

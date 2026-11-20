@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 from app.config import Settings
+from app.llm.journal import JOURNAL
 
 log = logging.getLogger(__name__)
 
@@ -47,6 +48,7 @@ class LLMResult:
     latency_ms: int
     input_tokens: int = 0
     output_tokens: int = 0
+    call_id: str | None = None  # the recorded conversation (app/llm/journal.py)
 
 
 @dataclass
@@ -65,6 +67,7 @@ class ToolRunResult:
     model: str
     latency_ms: int
     tool_calls: list[dict[str, Any]] = field(default_factory=list)
+    call_id: str | None = None
 
 
 class LLMClient(Protocol):
@@ -192,6 +195,20 @@ class AnthropicClient:
 
     # ---------------------------------------------------------------- JSON
     def complete_json(self, system: str, user: str, schema: dict[str, Any], *, max_tokens: int = 4000) -> LLMResult:
+        rec = JOURNAL.new(self.model, self.provider, system, user)
+        t0 = time.perf_counter()
+        try:
+            out = self._complete_json(system, user, schema, max_tokens, rec)
+        except LLMError as exc:
+            rec.ok, rec.error = False, str(exc)
+            rec.latency_ms = int((time.perf_counter() - t0) * 1000)
+            JOURNAL.add(rec)
+            raise
+        rec.latency_ms, rec.input_tokens, rec.output_tokens = out.latency_ms, out.input_tokens, out.output_tokens
+        out.call_id = JOURNAL.add(rec)
+        return out
+
+    def _complete_json(self, system: str, user: str, schema: dict[str, Any], max_tokens: int, rec: Any) -> LLMResult:
         t0 = time.perf_counter()
         resp = None
         if not self._plain_json:
@@ -213,8 +230,9 @@ class AnthropicClient:
                 f"{json.dumps(schema)}",
                 messages=[{"role": "user", "content": user}],
             )
-        self._check_stop(resp)
         text = next((b.text for b in resp.content if b.type == "text"), "")
+        rec.response = text
+        self._check_stop(resp)
         return LLMResult(
             data=extract_json(text),
             model=self.model,
@@ -226,6 +244,22 @@ class AnthropicClient:
     # ---------------------------------------------------------------- read-only tool loop
     def run_tools(
         self, system: str, user: str, tools: list[ToolSpec], *, max_turns: int = 6, max_tokens: int = 4000
+    ) -> ToolRunResult:
+        rec = JOURNAL.new(self.model, self.provider, system, user)
+        t0 = time.perf_counter()
+        try:
+            out = self._run_tools(system, user, tools, max_turns, max_tokens, rec)
+        except LLMError as exc:
+            rec.ok, rec.error = False, str(exc)
+            rec.latency_ms = int((time.perf_counter() - t0) * 1000)
+            JOURNAL.add(rec)
+            raise
+        rec.response, rec.latency_ms = out.text, out.latency_ms
+        out.call_id = JOURNAL.add(rec)
+        return out
+
+    def _run_tools(
+        self, system: str, user: str, tools: list[ToolSpec], max_turns: int, max_tokens: int, rec: Any
     ) -> ToolRunResult:
         t0 = time.perf_counter()
         by_name = {t.name: t for t in tools}
@@ -260,14 +294,15 @@ class AnthropicClient:
                     if spec is None:
                         raise ValueError(f"unknown tool {block.name}")
                     out = spec.fn(dict(block.input))
-                    results.append(
-                        {"type": "tool_result", "tool_use_id": block.id, "content": json.dumps(out, default=str)}
-                    )
+                    content = json.dumps(out, default=str)
+                    results.append({"type": "tool_result", "tool_use_id": block.id, "content": content})
                 except Exception as exc:  # tool errors go back to the model, never crash the loop
+                    content = f"Error: {exc}"
                     results.append(
-                        {"type": "tool_result", "tool_use_id": block.id, "content": f"Error: {exc}", "is_error": True}
+                        {"type": "tool_result", "tool_use_id": block.id, "content": content, "is_error": True}
                     )
                 calls.append({"name": block.name, "input": dict(block.input)})
+                rec.tool_calls.append({"name": block.name, "input": dict(block.input), "result": content[:4000]})
             messages.append({"role": "user", "content": results})
         raise LLMError("too many tool calls without an answer")
 

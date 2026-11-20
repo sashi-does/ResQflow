@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cn } from '@/lib/utils'
 import { api } from '../../api'
 import { Empty, PageGrid, RowsSkeleton, Section, StatCard, StatGrid } from '../../components/app/blocks'
+import { SavedRuns } from '../../components/app/SavedRuns'
 import { AGENT_LABEL, fmtNum } from '../../lib/format'
 import { fmtKpi } from '../../lib/kpiFormat'
 import { useStore } from '../../store'
@@ -216,6 +217,9 @@ export function OfficerReports() {
             It is written automatically when the 24-hour scenario ends, or now with “End & write report” (this pauses the simulation).
           </Empty>
         )}
+      </Section>
+      <Section title="Saved runs" description="Every run of every case, kept in the history database: compare the three cases and reopen any day's coordination cycles." className="lg:col-span-12">
+        <SavedRuns />
       </Section>
     </PageGrid>
   )

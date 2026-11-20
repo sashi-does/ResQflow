@@ -160,6 +160,7 @@ class Order(BaseModel):
     approval_requested_at_sim: int | None = None
     auto_approve_at_sim: int | None = None  # set when a policy (or a headless run) will approve it if nobody acts
     eta_min: float | None = None
+    cycle: int | None = None  # the planning cycle that created the order
     loaded_confirmed: bool = False  # warehouse manager pressed "Mark loaded" (doc 11; doesn't change sim timing)
 
 
@@ -189,6 +190,7 @@ class FieldReport(BaseModel):
     model: str | None = None
     latency_ms: int | None = None
     origin: Literal["camp", "demo"] = "camp"
+    llm_call: str | None = None  # the AI conversation that read this report
 
 
 class ApprovalPolicy(BaseModel):
@@ -218,6 +220,8 @@ class LogEntry(BaseModel):
     reasoning: str = ""
     refs: LogRefs = Field(default_factory=LogRefs)
     actor: str | None = None  # the logged-in person behind a human action (doc 11)
+    cycle: int | None = None  # coordination cycle this entry belongs to (see EventBus.begin_cycle)
+    llm_call: str | None = None  # id of the AI conversation behind this entry (app/llm/journal.py)
 
 
 class KPIs(BaseModel):

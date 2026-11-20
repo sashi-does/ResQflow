@@ -17,9 +17,10 @@ from app.auth.users import User, authenticate, demo_cards
 from app.auth.visibility import Visibility
 from app.config import get_settings
 from app.geo.hazards import hazard_from_preset
+from app.llm.journal import JOURNAL
 from app.models import ApprovalPolicy, Supplies
 from app.sim.live import get_live
-from app.sim.scenario import load_scenario
+from app.sim.scenario import list_cases, load_scenario
 
 VERSION = "0.1.0"
 
@@ -67,6 +68,16 @@ async def demo_users() -> list[dict]:
 
 class ResetBody(BaseModel):
     demo_timeline: bool = True
+    case: str | None = None
+
+
+class RunBody(BaseModel):
+    case: str | None = None
+
+
+def _check_case(case: str | None) -> None:
+    if case is not None and case not in {c["id"] for c in list_cases()}:
+        raise HTTPException(422, f"unknown case {case!r}")
 
 
 class SpeedBody(BaseModel):
@@ -99,6 +110,7 @@ async def health() -> dict:
         "llm_provider": s.effective_llm_provider,
         "llm_model": s.llm_model,
         "llm_disabled": getattr(get_live().llm, "disabled_reason", None),
+        "db": get_live().store.status,
         "weather_mode": s.weather_mode,
         "demo_inject_fault": s.demo_inject_fault,
         "version": VERSION,
@@ -108,7 +120,7 @@ async def health() -> dict:
 @router.get("/scenario", dependencies=[AnyUser])
 async def scenario() -> dict:
     """Static scenario data: nodes, edges (with geometry), warehouses, camps, trucks, presets."""
-    sc = load_scenario()
+    sc = load_scenario(case=get_live().case_id)
     g = sc.graph
     presets = []
     for p in sc.presets.values():
@@ -126,7 +138,59 @@ async def scenario() -> dict:
         "presets": presets,
         "constants": sc.constants | {"status_thresholds": {"critical_below_days": 0.5, "low_below_days": 1.0}},
         "timeline": sc.raw["timeline"],
+        "case": sc.raw["case"],
     }
+
+
+@router.get("/cases", dependencies=[AnyUser])
+async def cases() -> list[dict]:
+    """The three demo cases (same map and fleet, different scripted events)."""
+    return list(list_cases())
+
+
+@router.get("/llm-calls", dependencies=OFFICER)
+async def llm_calls(limit: int = Query(50, ge=1, le=300)) -> list[dict]:
+    """Recent AI conversations (newest first), without the long prompts."""
+    return [
+        {k: v for k, v in c.as_dict().items() if k not in ("system", "user", "response")}
+        | {"preview": c.response[:200]}
+        for c in JOURNAL.recent(limit)
+    ]
+
+
+@router.get("/llm-calls/{call_id}", dependencies=OFFICER)
+async def llm_call(call_id: str) -> dict:
+    """One AI conversation: system prompt, what the agent sent, the model's answer, tools it used, timing."""
+    live = get_live()
+    c = JOURNAL.get(call_id)
+    if c is not None:
+        return c.as_dict()
+    if live.store.enabled:
+        row = await asyncio.to_thread(live.store.get_llm_call, call_id)
+        if row:
+            return row
+    raise HTTPException(404, "conversation not found")
+
+
+@router.get("/history/runs", dependencies=OFFICER)
+async def history_runs(limit: int = Query(30, ge=1, le=200)) -> dict:
+    """Saved runs (Postgres): case, model, final KPIs, how many log entries, cycles and AI conversations."""
+    live = get_live()
+    if not live.store.enabled:
+        return {"enabled": False, "status": "off", "runs": []}
+    try:
+        rows = await asyncio.to_thread(live.store.runs, limit)
+    except Exception as exc:
+        return {"enabled": True, "status": "error", "error": str(exc).splitlines()[0], "runs": []}
+    return {"enabled": True, "status": "connected", "current_run": live.run_id, "runs": rows}
+
+
+@router.get("/history/runs/{run_id}/log", dependencies=OFFICER)
+async def history_log(run_id: str) -> list[dict]:
+    live = get_live()
+    if not live.store.enabled:
+        raise HTTPException(404, "history database is not configured")
+    return await asyncio.to_thread(live.store.run_log, run_id)
 
 
 @router.get("/state")
@@ -153,7 +217,8 @@ async def sim_pause() -> dict:
 @router.post("/sim/reset", dependencies=OFFICER)
 async def sim_reset(body: ResetBody | None = None) -> dict:
     live = get_live()
-    live.reset(demo_timeline=body.demo_timeline if body else True)
+    _check_case(body.case if body else None)
+    live.reset(demo_timeline=body.demo_timeline if body else True, case=body.case if body else None)
     return live.snapshot()
 
 
@@ -186,9 +251,10 @@ async def inject_fault(body: FaultBody) -> dict:
 
 
 @router.post("/demo/run", dependencies=OFFICER)
-async def demo_run() -> dict:
+async def demo_run(body: RunBody | None = None) -> dict:
     live = get_live()
-    live.reset(demo_timeline=True)
+    _check_case(body.case if body else None)
+    live.reset(demo_timeline=True, case=body.case if body else None)
     live.clock.running = True
     live.broadcast("tick", live.tick_payload())
     return {"running": True, "sim": live.sim_view()}
@@ -454,6 +520,7 @@ async def copilot(body: CopilotBody) -> dict:
             "copilot.asked",
             f'{who("Command")} asked the copilot: "{body.question.strip()[:140]}"',
             out.get("answer", ""),
+            llm_call=out.get("call_id"),
         )
         live.world.bus.record_ms("copilot", (time.perf_counter() - t0) * 1000)
     return out

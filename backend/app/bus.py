@@ -6,7 +6,8 @@ Subscribers (the WebSocket broadcaster, tests) receive `(type, payload)` synchro
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from typing import Any
 
@@ -26,6 +27,29 @@ class EventBus:
         self.entries: list[LogEntry] = []
         self._next_id = 1
         self.stats: dict[str, dict[str, Any]] = {}  # per agent: count, last_summary, last_at, timing
+        # Coordination cycles: everything that happens is logged into the *open* cycle (what changed since the last
+        # plan). When the Coordinator starts planning, that cycle is handed over (trigger + planning + checks +
+        # dispatch all share its id) and a new open cycle starts collecting the next changes.
+        self.open_cycle = 1
+        self._forced: int | None = None
+
+    def begin_cycle(self) -> int:
+        cid = self.open_cycle
+        self.open_cycle += 1
+        return cid
+
+    @property
+    def forced_cycle(self) -> int | None:
+        """The planning cycle being worked on right now (None outside planning)."""
+        return self._forced
+
+    @contextmanager
+    def in_cycle(self, cycle: int | None) -> Iterator[None]:
+        prev, self._forced = self._forced, cycle
+        try:
+            yield
+        finally:
+            self._forced = prev
 
     def _stat(self, agent: str) -> dict[str, Any]:
         return self.stats.setdefault(
@@ -64,6 +88,9 @@ class EventBus:
         kind: str,
         summary: str,
         reasoning: str = "",
+        *,
+        cycle: int | None = None,
+        llm_call: str | None = None,
         **refs: list[str],
     ) -> LogEntry | None:
         if not self.enabled:
@@ -80,6 +107,8 @@ class EventBus:
             reasoning=reasoning,
             refs=LogRefs(**refs),
             actor=current_actor.get() if agent == "human" else None,
+            cycle=cycle or self._forced or self.open_cycle,
+            llm_call=llm_call,
         )
         self._next_id += 1
         self.entries.append(entry)

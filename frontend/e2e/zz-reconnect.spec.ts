@@ -26,7 +26,7 @@ test('UI shows a banner when the backend dies and recovers when it comes back', 
   const server = spawn('uv', ['run', 'uvicorn', 'app.main:app', '--port', String(BACKEND_PORT)], {
     cwd: '../backend',
     stdio: 'ignore',
-    env: { ...process.env, LLM_PROVIDER: 'mock' },
+    env: { ...process.env, LLM_PROVIDER: 'mock', DATABASE_URL: '' },
     detached: true,
   })
   try {

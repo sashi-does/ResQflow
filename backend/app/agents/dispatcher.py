@@ -69,6 +69,7 @@ class DispatcherAgent:
         out = []
         for co in result.validation.orders:
             order = self._make_order(world, co, result.source)
+            order.cycle = world.bus.forced_cycle
             world.orders[order.id] = order
             check = validate(world, {"orders": [self._as_plan_order(order)]})
             if not check.ok:
@@ -80,6 +81,7 @@ class DispatcherAgent:
                     "The world changed while the plan was being made, so the order was checked again just before "
                     "dispatch and no longer passes.",
                     order_ids=[order.id],
+                    cycle=order.cycle,
                     truck_ids=[order.truck_id],
                 )
                 world.bus.publish("order.updated", order.model_dump())
@@ -104,6 +106,7 @@ class DispatcherAgent:
                 f"Order {order.id} could not go after approval: {check.hard[0].message}",
                 "Re-checked against the current situation at approval time.",
                 order_ids=[order.id],
+                cycle=order.cycle,
                 truck_ids=[order.truck_id],
             )
             world.bus.publish("order.updated", order.model_dump())
@@ -116,6 +119,7 @@ class DispatcherAgent:
                 "Headless and baseline runs stand in for the district officer. "
                 "In the live dashboard the Command approval policy or a human decides.",
                 order_ids=[order.id],
+                cycle=order.cycle,
             )
         elif auto:
             p = self.policy or ApprovalPolicy()
@@ -126,6 +130,7 @@ class DispatcherAgent:
                 f"nobody objected within {p.delay_min} min.",
                 "The camp is critical, so waiting longer would cost water. Command can change this policy at any time.",
                 order_ids=[order.id],
+                cycle=order.cycle,
                 truck_ids=[order.truck_id],
             )
         else:
@@ -135,6 +140,7 @@ class DispatcherAgent:
                 f"Approved by {who('the District Officer')}. Order {order.id} released."
                 + (f' Note: "{note}"' if note else ""),
                 order_ids=[order.id],
+                cycle=order.cycle,
                 truck_ids=[order.truck_id],
             )
         self._dispatch(world, order)
@@ -153,6 +159,7 @@ class DispatcherAgent:
             f"Truck {order.truck_id} released." + (f' Note: "{note}"' if note else ""),
             "The next planning cycle will re-plan without this order.",
             order_ids=[order.id],
+            cycle=order.cycle,
             truck_ids=[order.truck_id],
         )
         world.bus.publish("order.updated", order.model_dump())
@@ -224,6 +231,7 @@ class DispatcherAgent:
                 f"{' and '.join(reasons)}.",
                 f"Truck {order.truck_id} is reserved meanwhile. Load: {fmt_items(order.items)}. {order.reason}",
                 order_ids=[order.id],
+                cycle=order.cycle,
                 truck_ids=[order.truck_id],
                 camp_ids=[order.camp_id],
             )
@@ -248,6 +256,7 @@ class DispatcherAgent:
             f"({fmt_kg(order.weight_kg)}). Arrives in about {fmt_duration(total)}{reposition}.",
             order.reason,
             order_ids=[order.id],
+            cycle=order.cycle,
             truck_ids=[t.id],
             camp_ids=[camp.id],
         )

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Protocol
+from dataclasses import dataclass, field
+from typing import Any, Protocol
 
+from app.models import Supplies
 from app.sim import engine
 from app.sim.clock import STEP_S
 from app.sim.scenario import ScenarioData, parse_sim_time
@@ -14,13 +15,33 @@ from app.sim.world import WorldState
 @dataclass(frozen=True)
 class TimelineEvent:
     at_s: int
-    action: str  # hazard_add | hazard_remove | weather_check | end
+    action: str  # hazard_add | hazard_remove | weather_check | population_change | stock_arrival | end
     preset_id: str | None = None
+    params: dict[str, Any] = field(default_factory=dict, hash=False, compare=False)
+
+
+GROUND_TRUTH = ("population_change", "stock_arrival")
+
+
+def apply_ground_truth(world: WorldState, ev: TimelineEvent) -> None:
+    """Things that happen in the world whatever the plan is (people arrive, stock arrives): same in both runs."""
+    p = ev.params
+    if ev.action == "population_change":
+        camp = world.camps[p["camp_id"]]
+        camp.population = max(0, camp.population + int(p["delta"]))
+    elif ev.action == "stock_arrival":
+        wh = world.warehouses[p["warehouse_id"]]
+        wh.stock = wh.stock + Supplies(**p["items"])
 
 
 def load_timeline(sc: ScenarioData) -> list[TimelineEvent]:
     events = [
-        TimelineEvent(parse_sim_time(e["at"], sc.start_offset_s), e["action"], e.get("preset_id"))
+        TimelineEvent(
+            parse_sim_time(e["at"], sc.start_offset_s),
+            e["action"],
+            e.get("preset_id"),
+            {k: v for k, v in e.items() if k not in ("at", "action", "preset_id")},
+        )
         for e in sc.raw["timeline"]
     ]
     return sorted(events, key=lambda e: e.at_s)
@@ -51,6 +72,9 @@ class Simulation:
         events = self.due_events()
         if any(e.action == "end" for e in events):
             self.ended = True
+        for ev in events:
+            if ev.action in GROUND_TRUTH:
+                apply_ground_truth(self.world, ev)
         self.policy.on_step(self.world, events)
         if self.ended:  # the scenario stops exactly at its end time: no step after the end-of-scenario summary
             return

@@ -21,6 +21,7 @@ from app.agents.heuristic_planner import heuristic_plan
 from app.agents.types import CampStatus, PlanResult
 from app.agents.validator import describe, validate
 from app.llm.client import LLMClient, LLMError, MockClient, display_name
+from app.llm.journal import purpose
 from app.llm.prompts import COORDINATOR_SYSTEM, PLAN_SCHEMA
 from app.sim.world import WorldState
 from app.text import fmt_duration
@@ -38,6 +39,7 @@ class _Cycle:
     future: Future | None = None
     last_plan: dict[str, Any] | None = None
     violations: list[str] = field(default_factory=list)
+    call_id: str | None = None  # the AI conversation behind the latest attempt
 
 
 class CoordinatorAgent:
@@ -58,6 +60,7 @@ class CoordinatorAgent:
         self.last: PlanResult | None = None
         self.inject_next = False  # armed by the orchestrator for DEMO_INJECT_FAULT
         self.injected = False
+        self.cycle_id: int | None = None  # set by the orchestrator for each planning cycle
         self._cycle: _Cycle | None = None
         self._pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="coordinator") if background else None
         self._last_unserved: tuple[str, ...] = ()
@@ -77,10 +80,15 @@ class CoordinatorAgent:
         return f"Coordinator ({display_name(self.llm.model)})" if self.llm.available else "Coordinator (offline mode)"
 
     # ------------------------------------------------------------ entry points
-    def plan(self, world: WorldState, statuses: dict[str, CampStatus], trigger: str) -> PlanResult | None:
-        """Start a planning cycle. Returns the result now (headless / offline) or None while the LLM thinks."""
-        if not self.llm.available:
-            return self._offline(world, statuses, trigger)
+    def plan(
+        self, world: WorldState, statuses: dict[str, CampStatus], trigger: str, *, routine: bool = False
+    ) -> PlanResult | None:
+        """Start a planning cycle. Returns the result now (headless / offline / routine) or None while the LLM thinks.
+
+        Routine re-plans (hourly, a truck came free) use the instant heuristic even when an AI is available: the AI
+        is asked when something actually changed (a flood, a surge, a critical camp, a report)."""
+        if not self.llm.available or routine:
+            return self._offline(world, statuses, trigger, routine=routine and self.llm.available)
         self._cycle = _Cycle(trigger, build_context(world, statuses, self))
         self._launch(world)
         if self.background:
@@ -97,7 +105,9 @@ class CoordinatorAgent:
         if not block and not c.future.done():
             return None
         try:
-            plan = c.future.result()
+            answer = c.future.result()
+            c.call_id = answer.call_id
+            plan = answer.data
         except LLMError as exc:
             return self._fallback(world, c, f"{display_name(self.llm.model)} failed: {exc}")
         except Exception as exc:  # never let an LLM problem crash the demo
@@ -108,7 +118,7 @@ class CoordinatorAgent:
         if res.ok:
             latency = int((time.perf_counter() - c.started) * 1000)
             result = PlanResult(plan, res, "llm", c.attempt, latency, c.trigger)
-            self._log_proposal(world, result, revised=c.attempt > 1)
+            self._log_proposal(world, result, revised=c.attempt > 1, llm_call=c.call_id)
             self._finish()
             return result
         world.bus.log(
@@ -118,6 +128,7 @@ class CoordinatorAgent:
             (INJECT_LABEL + ". " if injected else "")
             + f"Attempt {c.attempt} of {MAX_ATTEMPTS}. Nothing was dispatched; "
             "the violations go back to the Coordinator.",
+            llm_call=c.call_id,
         )
         if c.attempt >= MAX_ATTEMPTS:
             return self._fallback(world, c, f"{MAX_ATTEMPTS} attempts still had violations")
@@ -137,9 +148,11 @@ class CoordinatorAgent:
             payload["previous_plan"] = c.last_plan
             payload["violations"] = c.violations
         user = json.dumps(payload, separators=(",", ":"))
+        meta = {"cycle": self.cycle_id, "attempt": c.attempt, "sim_time": world.sim_time, "trigger": c.trigger}
 
-        def call() -> dict[str, Any]:
-            return self.llm.complete_json(COORDINATOR_SYSTEM, user, PLAN_SCHEMA, max_tokens=4000).data
+        def call() -> Any:
+            with purpose("coordinator", **meta):
+                return self.llm.complete_json(COORDINATOR_SYSTEM, user, PLAN_SCHEMA, max_tokens=8000)
 
         if self._pool is not None:
             c.future = self._pool.submit(call)
@@ -176,7 +189,9 @@ class CoordinatorAgent:
         )
         return plan, True
 
-    def _offline(self, world: WorldState, statuses: dict[str, CampStatus], trigger: str) -> PlanResult:
+    def _offline(
+        self, world: WorldState, statuses: dict[str, CampStatus], trigger: str, *, routine: bool = False
+    ) -> PlanResult:
         t0 = time.perf_counter()
         plan = self._heuristic(world, statuses)
         attempts = 1
@@ -198,7 +213,7 @@ class CoordinatorAgent:
             plan = {"orders": [], "unserved": plan.get("unserved", []), "summary": "No safe plan this cycle."}
             res = validate(world, plan, max_orders=self.max_orders, statuses=statuses)
         result = PlanResult(plan, res, "heuristic", attempts, int((time.perf_counter() - t0) * 1000), trigger)
-        self._log_proposal(world, result, revised=attempts > 1)
+        self._log_proposal(world, result, revised=attempts > 1, routine=routine)
         self.last = result
         return result
 
@@ -222,7 +237,16 @@ class CoordinatorAgent:
             world, statuses, max_orders=self.max_orders, approval_threshold_kg=self.approval_threshold_kg
         )
 
-    def _log_proposal(self, world: WorldState, r: PlanResult, *, revised: bool, fallback: bool = False) -> None:
+    def _log_proposal(
+        self,
+        world: WorldState,
+        r: PlanResult,
+        *,
+        revised: bool,
+        fallback: bool = False,
+        routine: bool = False,
+        llm_call: str | None = None,
+    ) -> None:
         self.last = r
         orders = r.validation.orders
         unserved_key = tuple(sorted(u["camp_id"] for u in r.plan.get("unserved", []) if "Cut off" in u.get("why", "")))
@@ -240,7 +264,7 @@ class CoordinatorAgent:
             if u.get("camp_id") in world.camps
         ]
         n = len(orders)
-        who = "Heuristic planner" if fallback else self.label
+        who = "Heuristic planner" if fallback else "Heuristic planner (routine re-plan)" if routine else self.label
         timing = f" in {r.latency_ms / 1000:.1f}s" if r.source == "llm" else ""
         verb = "revised the plan" if revised else "proposed"
         head = f"{who} {verb}" + (f" {n} order{'s' if n != 1 else ''}" if verb == "proposed" else f": {n} orders")
@@ -251,6 +275,7 @@ class CoordinatorAgent:
             f"Trigger: {r.trigger}. Attempts: {r.attempts}.\n" + "\n".join(lines + unserved),
             truck_ids=[o.truck_id for o in orders],
             camp_ids=sorted({o.camp_id for o in orders}),
+            llm_call=llm_call,
         )
         if orders:
             soft = r.validation.soft

@@ -1,85 +1,75 @@
-import { ChevronRight, Workflow } from 'lucide-react'
-import { Fragment, useMemo } from 'react'
-import { AGENT_COLORS } from '../../lib/format'
+import { ArrowRight, Bot, ChevronRight, Workflow } from 'lucide-react'
+import { Fragment } from 'react'
+import { cn } from '@/lib/utils'
 import { AGENTS } from '../../lib/agents'
-import { useStore } from '../../store'
-import type { AgentName, LogEntry } from '../../types'
+import { agentColor, cycleTitle, type Cycle } from '../../lib/cycles'
 import { Empty } from './blocks'
 
-const ORDER: AgentName[] = ['field_intake', 'monitor', 'inventory', 'routing', 'coordinator', 'validator', 'dispatcher', 'human']
-
-interface Step {
-  agent: AgentName
-  count: number
-  text: string
-}
-
-interface Cycle {
-  key: number
-  sim_time: string
-  steps: Step[]
-}
-
-/** Group the decision log into coordination cycles: everything the agents did at the same sim time. */
-function cycles(log: LogEntry[], max: number): Cycle[] {
-  const out: Cycle[] = []
-  const bySec = new Map<number, LogEntry[]>()
-  for (const e of log) {
-    if (e.agent === 'system') continue
-    const list = bySec.get(e.sim_seconds)
-    if (list) list.push(e)
-    else bySec.set(e.sim_seconds, [e])
-  }
-  for (const [sec, entries] of bySec) {
-    const agents = [...new Set(entries.map((e) => e.agent))].sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b))
-    if (agents.length < 2) continue // a cycle is at least two agents handing work to each other
-    const steps = agents.map((a) => {
-      const mine = entries.filter((e) => e.agent === a).reverse() // log is newest-first; show the first action
-      return { agent: a, count: mine.length, text: mine[0].summary }
-    })
-    out.push({ key: sec, sim_time: entries[0].sim_time, steps })
-    if (out.length >= max) break
-  }
-  return out
-}
-
-/** Each cycle as a chain: who did what, and who acted on it next. */
-export function CoordinationTimeline({ max = 6 }: { max?: number }) {
-  const log = useStore((s) => s.log)
-  const list = useMemo(() => cycles(log, max), [log, max])
-  if (list.length === 0) {
+/** Each coordination cycle as one clickable row: why it started, the chain of agents, and what came out of it. */
+export function CoordinationTimeline({ cycles, selected, onSelect, onOpen }: { cycles: Cycle[]; selected?: number | null; onSelect?: (id: number) => void; onOpen: (id: number) => void }) {
+  if (cycles.length === 0) {
     return (
       <Empty icon={Workflow} title="No coordination yet">
-        Start the scenario from Simulation. Each time something changes, you will see the agents hand the work to each other here.
+        Start a case from Simulation. Each time something changes, you will see the agents hand the work to each other here.
       </Empty>
     )
   }
   return (
-    <ol className="space-y-4" data-testid="coordination-timeline">
-      {list.map((c) => (
-        <li key={c.key} className="rounded-lg border border-slate-200 p-3" data-testid="coordination-cycle">
-          <div className="mb-2 flex items-center gap-2 text-xs text-slate-500">
-            <span className="font-semibold text-slate-900 tnum">{c.sim_time}</span>
-            <span>{c.steps.length} agents worked together</span>
-          </div>
-          <div className="flex flex-wrap items-stretch gap-1.5">
-            {c.steps.map((s, i) => {
-              const color = s.agent === 'human' ? '#475569' : AGENT_COLORS[s.agent]
-              return (
-                <Fragment key={s.agent}>
-                  {i > 0 && <ChevronRight className="size-4 shrink-0 self-center text-slate-300" aria-hidden />}
-                  <div className="min-w-[10rem] flex-1 rounded-md border-l-[3px] bg-slate-50 px-2.5 py-1.5" style={{ borderLeftColor: color }}>
-                    <div className="flex items-center gap-1.5 text-[11px] font-semibold" style={{ color }}>
-                      {AGENTS[s.agent].name}
-                      {s.count > 1 && <span className="font-normal text-slate-500">×{s.count}</span>}
-                    </div>
-                    <div className="line-clamp-2 text-xs text-slate-700" title={s.text}>
-                      {s.text}
-                    </div>
-                  </div>
+    <ol className="space-y-2" data-testid="coordination-timeline">
+      {cycles.map((c) => (
+        <li key={c.id}>
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => {
+              onSelect?.(c.id)
+              onOpen(c.id)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onSelect?.(c.id)
+                onOpen(c.id)
+              }
+            }}
+            onMouseEnter={() => onSelect?.(c.id)}
+            className={cn(
+              'group cursor-pointer rounded-lg border p-3 transition-colors hover:border-brand-400 hover:bg-brand-50/40 focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:outline-none',
+              selected === c.id ? 'border-brand-500 bg-brand-50/50' : 'border-slate-200',
+            )}
+            data-testid="coordination-cycle"
+          >
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-x-2 text-xs text-slate-500">
+                  <span className="font-semibold text-slate-900 tnum">{c.start}</span>
+                  <span className="tnum">#{c.id}</span>
+                  {c.llmCalls.length > 0 && (
+                    <span className="inline-flex items-center gap-0.5 rounded bg-brand-50 px-1 text-[10px] font-semibold text-brand-800">
+                      <Bot className="size-3" aria-hidden /> AI planned
+                    </span>
+                  )}
+                  {c.rejected > 0 && <span className="rounded bg-amber-50 px-1 text-[10px] font-semibold text-amber-800">Validator objected ×{c.rejected}</span>}
+                </div>
+                <div className="mt-0.5 truncate text-sm font-medium text-slate-900">{cycleTitle(c)}</div>
+              </div>
+              <ChevronRight className="mt-1 size-4 shrink-0 text-slate-400 group-hover:text-slate-700" aria-hidden />
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-1 text-[11px]">
+              {c.agents.map((a, i) => (
+                <Fragment key={a}>
+                  {i > 0 && <ArrowRight className="size-3 text-slate-400" aria-hidden />}
+                  <span className="rounded-full px-2 py-0.5 font-semibold text-white" style={{ background: agentColor(a) }}>
+                    {AGENTS[a].name}
+                  </span>
                 </Fragment>
-              )
-            })}
+              ))}
+            </div>
+            <div className="mt-2 text-xs text-slate-500 tnum">
+              {c.entries.length} steps
+              {c.dispatched > 0 && ` · ${c.dispatched} truck${c.dispatched > 1 ? 's' : ''} sent`}
+              {c.approvals > 0 && ` · ${c.approvals} waiting for approval`}
+            </div>
           </div>
         </li>
       ))}

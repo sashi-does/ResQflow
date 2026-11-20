@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     seed: int = 42
     demo_inject_fault: bool = False
     jwt_secret: str = ""
+    database_url: str = ""  # Postgres for run history (runs, decision log, AI conversations); empty = memory only
 
     @property
     def effective_llm_provider(self) -> str:

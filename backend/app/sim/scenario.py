@@ -44,9 +44,28 @@ def format_sim_time(sim_seconds: int, start_offset_s: int) -> str:
     return f"D{day + 1} {rem // 3600:02d}:{rem % 3600 // 60:02d}"
 
 
+DEFAULT_CASE = "highway"
+
+
 @lru_cache
-def load_scenario(name: str = "assam") -> ScenarioData:
+def list_cases() -> tuple[dict[str, Any], ...]:
+    """The three demo cases: same map, camps and trucks; different scripted events (data/cases.json)."""
+    return tuple(json.loads((DATA_DIR / "cases.json").read_text()))
+
+
+def get_case(case_id: str) -> dict[str, Any]:
+    for c in list_cases():
+        if c["id"] == case_id:
+            return c
+    raise KeyError(case_id)
+
+
+@lru_cache
+def load_scenario(name: str = "assam", case: str = DEFAULT_CASE) -> ScenarioData:
     raw = json.loads((DATA_DIR / f"scenario_{name}.json").read_text())
+    c = get_case(case)
+    raw["timeline"] = c["timeline"]
+    raw["case"] = {k: v for k, v in c.items() if k != "timeline"}
     road = json.loads((DATA_DIR / "road_graph.json").read_text())
     presets = {p["id"]: p for p in json.loads((DATA_DIR / "flood_presets.json").read_text())}
     nodes = {n["id"]: Node(**n) for n in raw["nodes"]}

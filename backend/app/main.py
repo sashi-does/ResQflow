@@ -24,6 +24,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         live.start_background()
     yield
     await live.stop_background()
+    live.store.flush(timeout=5)  # finish queued history writes
 
 
 app = FastAPI(title="RahatNet", version=VERSION, lifespan=lifespan)

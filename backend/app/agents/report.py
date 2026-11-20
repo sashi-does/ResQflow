@@ -13,6 +13,7 @@ from collections import Counter
 from typing import Any
 
 from app.llm.client import LLMClient, LLMError, display_name
+from app.llm.journal import purpose
 from app.models import FieldReport
 from app.sim.world import WorldState
 
@@ -225,7 +226,8 @@ def audit(text: str, f: dict[str, Any]) -> list[str]:
 def llm_narrative(llm: LLMClient, f: dict[str, Any]) -> tuple[dict[str, Any] | None, str]:
     facts = {k: v for k, v in f.items() if k not in ("kpis", "kpi_rows")}
     try:
-        res = llm.complete_json(NARRATIVE_SYSTEM, json.dumps(facts, default=str), NARRATIVE_SCHEMA, max_tokens=2000)
+        with purpose("report"):
+            res = llm.complete_json(NARRATIVE_SYSTEM, json.dumps(facts, default=str), NARRATIVE_SCHEMA, max_tokens=2000)
     except LLMError as exc:
         return None, f"AI narrative failed ({exc}); used the template"
     raw = res.data

@@ -21,6 +21,9 @@ from app.models import ApprovalPolicy, Hazard
 from app.sim.runner import TimelineEvent
 from app.sim.world import WorldState
 
+# Re-plans that only keep trucks busy use the instant heuristic planner; the AI is used when something changed.
+ROUTINE = frozenset({"hourly re-plan", "a truck became free while camps still need supplies"})
+
 
 @contextmanager
 def timed(world: WorldState, agent: str) -> Iterator[None]:
@@ -60,16 +63,14 @@ class Orchestrator:
         self._free_trucks: set[str] = set()
         self.ended = False
         self.sitrep_every_s = 3 * 3600
+        self.cycle_id: int | None = None
         self._last_sitrep = 0
 
     # ------------------------------------------------------------ Policy
     def on_step(self, world: WorldState, events: list[TimelineEvent]) -> None:
         for ev in events:
             self.handle_event(world, ev)
-        if self.coordinator.busy:  # live mode: an LLM answer may have arrived
-            result = self.coordinator.poll(world)
-            if result is not None:
-                self._complete(world, result)
+        self.poll_plan(world)
         for cid in self.inventory.track(world):
             self.request(f"{world.camps[cid].name} became critical")
         free = {t.id for t in world.trucks.values() if world.truck_is_free(t.id)}
@@ -102,6 +103,32 @@ class Orchestrator:
         elif ev.action == "weather_check":
             if self.monitor.weather_check(world):
                 self.request("heavy-rain advisory")
+        elif ev.action == "population_change":
+            camp = world.camps[ev.params["camp_id"]]
+            delta = int(ev.params["delta"])
+            world.bus.log(
+                "monitor",
+                "camp.population",
+                f"{delta:,} more people reached {camp.name} ({ev.params.get('note', 'district update')}). "
+                f"It now shelters {camp.population:,}.",
+                f"District administration update. At this size the camp uses "
+                f"{world.burn_per_day(camp)['water_l']:,.0f} L of water a day; it has "
+                f"{world.water_days(camp):.1f} days left. The Coordinator re-plans.",
+                camp_ids=[camp.id],
+            )
+            self.request(f"{delta:,} more people at {camp.name}")
+        elif ev.action == "stock_arrival":
+            wh = world.warehouses[ev.params["warehouse_id"]]
+            items = ev.params["items"]
+            world.bus.log(
+                "monitor",
+                "stock.arrived",
+                f"A {ev.params.get('note', 'consignment')} reached the {wh.name} warehouse: "
+                f"{items.get('water_l', 0):,} L water, {items.get('food_rations', 0):,} food rations, "
+                f"{items.get('medical_kits', 0):,} medical kits.",
+                "More stock is available, so the Coordinator re-plans with it.",
+            )
+            self.request(f"new stock at {wh.name}")
         elif ev.action == "end" and not self.ended:
             self.ended = True
             k = world.kpi.snapshot()
@@ -133,6 +160,16 @@ class Orchestrator:
             self.request(f"hazard cleared: {hazard.label}")
         return hazard
 
+    def poll_plan(self, world: WorldState) -> bool:
+        """Live mode: finish the cycle if the AI's answer has arrived. Returns True while it is still thinking."""
+        if not self.coordinator.busy:
+            return False
+        with world.bus.in_cycle(self.cycle_id):
+            result = self.coordinator.poll(world)
+        if result is not None:
+            self._complete(world, result)
+        return self.coordinator.busy
+
     def request(self, trigger: str) -> None:
         if trigger not in self.pending:
             self.pending.append(trigger)
@@ -142,23 +179,36 @@ class Orchestrator:
         trigger = "; ".join(self.pending)
         self.pending = []
         self.last_cycle_at = world.sim_seconds
-        self.routing.resume_holding(world)
-        with timed(world, "inventory"):
-            statuses = self.inventory.run(world)
-        self.dispatcher.recall_cut_off(world)
-        statuses = {
-            cid: self.inventory.camp_status(world, world.camps[cid], reachable=not st.cut_off)
-            for cid, st in statuses.items()
-        }  # refresh incoming after recalls
-        world.bus.publish("plan.started", {"trigger": trigger, "coordinator": self.coordinator.label})
-        result = self.coordinator.plan(world, statuses, trigger)
-        if result is None:  # the LLM is thinking in the background; finished in on_step via poll()
-            return None
-        return self._complete(world, result)
+        self.cycle_id = world.bus.begin_cycle()  # what changed since the last plan + this plan share one cycle id
+        with world.bus.in_cycle(self.cycle_id):
+            world.bus.log(
+                "coordinator",
+                "cycle.started",
+                f"Planning cycle #{self.cycle_id} started. Why now: {trigger}.",
+                f"Coordinator: {self.coordinator.label}. Inventory refreshes every camp's days of cover, the "
+                "Coordinator proposes a plan, the Validator checks it, and the Dispatcher sends or asks for approval.",
+            )
+            self.routing.resume_holding(world)
+            with timed(world, "inventory"):
+                statuses = self.inventory.run(world)
+            self.dispatcher.recall_cut_off(world)
+            statuses = {
+                cid: self.inventory.camp_status(world, world.camps[cid], reachable=not st.cut_off)
+                for cid, st in statuses.items()
+            }  # refresh incoming after recalls
+            world.bus.publish(
+                "plan.started", {"trigger": trigger, "coordinator": self.coordinator.label, "cycle": self.cycle_id}
+            )
+            self.coordinator.cycle_id = self.cycle_id
+            routine = all(t in ROUTINE for t in trigger.split("; "))
+            result = self.coordinator.plan(world, statuses, trigger, routine=routine)
+            if result is None:  # the LLM is thinking in the background; finished in on_step via poll()
+                return None
+            return self._complete(world, result)
 
     def _complete(self, world: WorldState, result: PlanResult) -> PlanResult:
         world.bus.record_ms("coordinator", result.latency_ms)
-        with timed(world, "dispatcher"):
+        with world.bus.in_cycle(self.cycle_id), timed(world, "dispatcher"):
             self.dispatcher.execute(world, result)
         world.bus.publish(
             "plan.completed",
@@ -168,6 +218,7 @@ class Orchestrator:
                 "attempts": result.attempts,
                 "latency_ms": result.latency_ms,
                 "summary": result.plan.get("summary", ""),
+                "cycle": self.cycle_id,
                 "unserved": result.plan.get("unserved", []),
             },
         )

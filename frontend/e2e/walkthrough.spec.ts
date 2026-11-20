@@ -66,8 +66,16 @@ test('walkthrough: 4 roles in 4 windows, every page, cross-role updates within 2
   await o.waitForTimeout(1300)
   await api.post('/sim/pause')
   await shot(o, '04-officer-live-operations')
+  const frameBefore = (await o.getByTestId('ops-frame').boundingBox())!.height
+  const mapBefore = (await o.getByTestId('ops-map').boundingBox())!.height
   await o.locator('path.camp-critical').first().click({ force: true })
   await expect(o.getByTestId('ops-details')).toBeVisible()
+  await o.waitForTimeout(300)
+  // a long details panel scrolls inside its card; the map and the frame keep their size
+  expect((await o.getByTestId('ops-frame').boundingBox())!.height).toBeCloseTo(frameBefore, 0)
+  expect((await o.getByTestId('ops-map').boundingBox())!.height).toBeCloseTo(mapBefore, 0)
+  const scroller = o.getByTestId('ops-details-scroll')
+  expect(await scroller.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true)
   await shot(o, '04b-officer-live-operations-details')
 
   // 02 Overview (now with a situation to show)

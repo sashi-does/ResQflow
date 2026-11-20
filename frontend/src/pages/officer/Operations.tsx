@@ -103,11 +103,12 @@ function Details() {
 }
 
 export function OfficerOperations() {
+  // One fixed frame on desktop: the map fills it and a long details panel scrolls inside its card instead of stretching the page.
   return (
-    <div className="grid h-full min-h-[560px] grid-cols-1 gap-6 lg:grid-cols-12">
-      <OpsMap className="min-h-[480px] lg:col-span-8 xl:col-span-9" />
-      <Card className="lg:col-span-4 xl:col-span-3">
-        <CardContent className="h-full overflow-y-auto">
+    <div className="grid grid-cols-1 gap-6 lg:h-[calc(100dvh-12.5rem)] lg:min-h-[520px] lg:grid-cols-12" data-testid="ops-frame">
+      <OpsMap className="h-[420px] lg:col-span-8 lg:h-full xl:col-span-9" />
+      <Card className="max-h-[560px] min-h-0 py-0 lg:col-span-4 lg:h-full lg:max-h-none xl:col-span-3">
+        <CardContent className="h-full min-h-0 overflow-y-auto py-6" data-testid="ops-details-scroll">
           <Details />
         </CardContent>
       </Card>

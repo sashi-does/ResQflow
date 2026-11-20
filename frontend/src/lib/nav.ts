@@ -51,13 +51,13 @@ export const PAGES: PageDef[] = [
   {
     role: 'officer',
     slug: 'operations',
-    label: 'Live Operations',
+    label: 'Command Center',
     icon: Map,
-    title: 'Live Operations',
-    purpose: 'The live map of camps, warehouses, trucks, floods and detours. Click anything for details.',
+    title: 'Command Center',
+    purpose: 'Incidents, the live map, weather and trucks in one view, with the actions that need you next.',
     why: {
-      problem: 'Nobody can see where the trucks are or which roads are under water right now.',
-      does: 'Plots every camp, warehouse, truck and flood zone live; re-routes flash on the map as the AI makes them.',
+      problem: 'Nobody can see where the trucks are, which roads are under water, or what needs a decision right now.',
+      does: 'Lists every active incident worst first, plots camps, trucks and floods live (re-routes flash as they happen), shows rain and risk, and suggests the next actions from the agents\' state: approve, verify, alert a camp.',
       who: 'The District Officer and the control room.',
     },
   },

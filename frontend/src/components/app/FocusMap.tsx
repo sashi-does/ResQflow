@@ -1,6 +1,7 @@
 import L from 'leaflet'
 import { useEffect, useMemo } from 'react'
 import { CircleMarker, MapContainer, Polyline, TileLayer, useMap } from 'react-leaflet'
+import { useTheme } from '../../lib/theme'
 import { cn } from '@/lib/utils'
 import { useStore } from '../../store'
 import type { LatLon } from '../../types'
@@ -10,7 +11,7 @@ import { RoadsLayer } from '../map/RoadsLayer'
 import { TrucksLayer } from '../map/TrucksLayer'
 import { WarehousesLayer } from '../map/WarehousesLayer'
 
-const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+const ESRI = (base: string) => `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${base}/MapServer/tile/{z}/{y}/{x}`
 
 function Fit({ pts }: { pts: LatLon[] }) {
   const map = useMap()
@@ -30,13 +31,14 @@ function Fit({ pts }: { pts: LatLon[] }) {
 
 /** A small live map focused on one place (camp, truck route, warehouse), with a compact legend. */
 export function FocusMap({ focus, path, ring, className }: { focus: LatLon[]; path?: LatLon[]; ring?: LatLon; className?: string }) {
+  const theme = useTheme()
   const scenario = useStore((s) => s.scenario)
   const nodes = useMemo(() => new Map((scenario?.nodes ?? []).map((n) => [n.id, n])), [scenario])
   if (!scenario) return <div className={cn('animate-pulse rounded-xl bg-slate-200', className)} />
   return (
     <div className={cn('relative isolate z-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100', className)} data-testid="focus-map">
       <MapContainer center={focus[0] ?? [26.6, 92.6]} zoom={8.5} zoomSnap={0.25} className="h-full w-full" zoomControl={false} attributionControl={false}>
-        <TileLayer url={ESRI} />
+        <TileLayer key={theme} url={ESRI(theme === 'dark' ? 'World_Dark_Gray_Base' : 'World_Light_Gray_Base')} />
         <HazardsLayer />
         <RoadsLayer edges={scenario.edges} />
         {path && path.length > 1 && <Polyline positions={path} interactive={false} pathOptions={{ color: '#0d9488', weight: 4, opacity: 0.9 }} />}

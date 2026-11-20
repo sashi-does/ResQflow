@@ -72,6 +72,9 @@ interface State {
   alerts: CampAlert[]
   pick: { kind: 'camp' | 'truck' | 'warehouse'; id: string } | null
   setPick: (p: State['pick']) => void
+  /** Ask the map to fly somewhere (search results, incidents); `seq` re-triggers the same place. */
+  focus: { lat: number; lon: number; zoom: number; seq: number } | null
+  setFocus: (lat: number, lon: number, zoom?: number) => void
   clear: () => void
   receipts: Record<string, { received: Supplies; shortfall: Supplies }>
   thinking: boolean
@@ -131,6 +134,8 @@ export const useStore = create<State>((set, get) => ({
   alerts: [],
   pick: null,
   setPick: (pick) => set({ pick }),
+  focus: null,
+  setFocus: (lat, lon, zoom = 9.5) => set((s) => ({ focus: { lat, lon, zoom, seq: (s.focus?.seq ?? 0) + 1 } })),
   clear: () =>
     set({
       sim: null,

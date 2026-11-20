@@ -1,4 +1,4 @@
-import { Bell, PackageCheck, TriangleAlert, Truck } from 'lucide-react'
+import { Bell, Megaphone, PackageCheck, TriangleAlert, Truck } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import type { CampAlert } from '../../api'
@@ -10,6 +10,7 @@ const KIND: Record<CampAlert['kind'], { icon: LucideIcon; word: string; tone: 'b
   dispatch: { icon: Truck, word: 'On the way', tone: 'blue' },
   delay: { icon: TriangleAlert, word: 'Delayed', tone: 'amber' },
   arrival: { icon: PackageCheck, word: 'Arrived', tone: 'green' },
+  broadcast: { icon: Megaphone, word: 'From the District Officer', tone: 'amber' },
 }
 
 export function CampAlerts() {
@@ -44,9 +45,11 @@ export function CampAlerts() {
                       <Pill tone={k.tone}>{k.word}</Pill>
                       <span className="text-xs text-slate-500 tnum">{a.sim_time}</span>
                     </div>
-                    <p className="text-base text-slate-900" lang="as">
-                      {a.as}
-                    </p>
+                    {a.as && (
+                      <p className="text-base text-slate-900" lang="as">
+                        {a.as}
+                      </p>
+                    )}
                     <p className="text-sm text-slate-600" lang="en">
                       {a.en}
                     </p>

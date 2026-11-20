@@ -113,3 +113,22 @@ def test_history_reports_disabled_without_a_database(client):
     assert body == {"enabled": False, "status": "off", "runs": []}
     assert client.get("/api/llm-calls/doesnotexist").status_code == 404
     assert client.get("/api/history/runs", headers=H("driver.t3")).status_code == 403
+
+
+def test_broadcast_alert_reaches_camps_and_is_logged(client):
+    r = client.post("/api/alerts/broadcast", json={"message": "Boats on standby at Nimati Ghat.", "camp_ids": ["C7"]})
+    assert r.status_code == 200 and r.json() == {"sent": 1}
+    alerts = client.get("/api/camps/C7/alerts", headers=H("camp.majuli")).json()
+    assert alerts[0]["kind"] == "broadcast" and alerts[0]["en"] == "Boats on standby at Nimati Ghat."
+    log = client.get("/api/log").json()
+    entries = log if isinstance(log, list) else log["entries"]
+    assert any(e["kind"] == "alert.broadcast" and "Majuli" in e["summary"] for e in entries)
+    assert client.post("/api/alerts/broadcast", json={"message": "x", "camp_ids": ["C99"]}).status_code == 422
+    assert client.post("/api/alerts/broadcast", json={"message": "x"}, headers=H("camp.majuli")).status_code == 403
+
+
+def test_weather_lists_districts_with_rain(client):
+    w = client.get("/api/weather").json()
+    assert w["threshold_mm"] > 0 and w["districts"]
+    assert all({"district", "rain_24h_mm", "heavy"} <= set(d) for d in w["districts"])
+    assert w["districts"] == sorted(w["districts"], key=lambda d: -d["rain_24h_mm"])

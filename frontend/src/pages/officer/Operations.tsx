@@ -1,5 +1,5 @@
-import { MousePointerClick, X } from 'lucide-react'
-import { useCallback } from 'react'
+import { Maximize2, Megaphone, Minimize2, MousePointerClick, RefreshCw, X } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardAction, CardDescription } from '@/components/ui/card'
 import { ActivityList } from '../../components/app/ActivityList'
@@ -9,6 +9,13 @@ import { CampStatus, TruckStatusPill } from '../../components/app/status'
 import { fmtDuration, fmtItems, fmtKg, fmtNum, shortName } from '../../lib/format'
 import { useNames } from '../../lib/names'
 import { useStore } from '../../store'
+import { cn } from '@/lib/utils'
+import { api } from '../../api'
+import { Incidents } from '../../components/command/Incidents'
+import type { IncidentFilter } from '../../lib/incidents'
+import { useWeather } from '../../lib/weather'
+import { Fleet, IntelTiles, Suggestions } from '../../components/command/Intel'
+import { SendAlertDialog, type AlertDraft } from '../../components/command/SendAlertDialog'
 import type { LogEntry } from '../../types'
 
 function Row({ k, v }: { k: string; v: React.ReactNode }) {
@@ -103,15 +110,68 @@ function Details() {
 }
 
 export function OfficerOperations() {
-  // One fixed frame on desktop: the map fills it and a long details panel scrolls inside its card instead of stretching the page.
+  // One fixed frame on desktop (incidents | map | intelligence); long lists scroll inside their own column.
+  const pick = useStore((s) => s.pick)
+  const sim = useStore((s) => s.sim)
+  const toast = useStore((s) => s.toast)
+  const weather = useWeather()
+  const [filter, setFilter] = useState<IncidentFilter>('all')
+  const [draft, setDraft] = useState<AlertDraft | null>(null)
+  const [full, setFull] = useState(false)
+  const frame = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const on = () => setFull(document.fullscreenElement === frame.current)
+    document.addEventListener('fullscreenchange', on)
+    return () => document.removeEventListener('fullscreenchange', on)
+  }, [])
+  const toggleFull = () => {
+    if (document.fullscreenElement) void document.exitFullscreen()
+    else void frame.current?.requestFullscreen?.()
+  }
+  const onAlert = useCallback((d: AlertDraft) => setDraft(d), [])
   return (
-    <div className="grid grid-cols-1 gap-6 lg:h-[calc(100dvh-12.5rem)] lg:min-h-[520px] lg:grid-cols-12" data-testid="ops-frame">
-      <OpsMap className="h-[420px] lg:col-span-8 lg:h-full xl:col-span-9" />
-      <Card className="max-h-[560px] min-h-0 py-0 lg:col-span-4 lg:h-full lg:max-h-none xl:col-span-3">
-        <CardContent className="h-full min-h-0 overflow-y-auto py-6" data-testid="ops-details-scroll">
-          <Details />
-        </CardContent>
-      </Card>
+    <div ref={frame} className={cn('flex flex-col gap-3', full ? 'h-dvh bg-slate-50 p-3' : 'lg:h-[calc(100dvh-12.5rem)] lg:min-h-[560px]')} data-testid="ops-frame">
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
+        <span className={cn('inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold', sim?.running ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600')}>
+          <span className={cn('size-1.5 rounded-full', sim?.running ? 'animate-pulse bg-emerald-500' : 'bg-slate-400')} aria-hidden />
+          {sim?.held ? 'AI planning' : sim?.running ? 'Live' : 'Paused'}
+        </span>
+        <span className="text-sm font-semibold text-slate-900 tnum">{sim?.sim_time ?? '—'}</span>
+        <span className="hidden text-xs text-slate-500 sm:inline">· {CASE_TITLE[sim?.case_id ?? ''] ?? 'Assam floods'}</span>
+        <div className="ml-auto flex flex-wrap gap-1.5">
+          <Button size="sm" variant="outline" onClick={() => setDraft({ camps: 'risk' })} data-testid="open-send-alert">
+            <Megaphone /> Send alert
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => api.replan().then(() => toast('Re-planning now', 'info'), (e: unknown) => toast(String(e), 'error'))}>
+            <RefreshCw /> Re-plan now
+          </Button>
+          <Button size="sm" variant="ghost" onClick={toggleFull} aria-label={full ? 'Exit full screen' : 'Full screen'}>
+            {full ? <Minimize2 /> : <Maximize2 />}
+          </Button>
+        </div>
+      </div>
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-12">
+        <Card className="h-[360px] min-h-0 gap-0 overflow-hidden py-0 lg:col-span-3 lg:h-full">
+          <Incidents filter={filter} onFilter={setFilter} />
+        </Card>
+        <OpsMap className="h-[420px] lg:col-span-6 lg:h-full" compact />
+        <Card className="max-h-[640px] min-h-0 py-0 lg:col-span-3 lg:h-full lg:max-h-none">
+          <CardContent className="h-full min-h-0 space-y-5 overflow-y-auto px-4 py-4" data-testid="ops-details-scroll">
+            {pick ? (
+              <Details />
+            ) : (
+              <>
+                <IntelTiles weather={weather} />
+                <Suggestions weather={weather} onAlert={onAlert} />
+                <Fleet />
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+      <SendAlertDialog draft={draft} onClose={() => setDraft(null)} />
     </div>
   )
 }
+
+const CASE_TITLE: Record<string, string> = { highway: 'Case 1 · Highway flood', northbank: 'Case 2 · North bank cut off', surge: 'Case 3 · Lower Assam surge' }

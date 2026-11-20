@@ -255,6 +255,27 @@ class LiveSim:
         self.alerts.append(alert)
         self.broadcast("camp.alert", alert)
 
+    def broadcast_alert(self, message: str, camp_ids: list[str] | None) -> list[dict[str, Any]]:
+        """Command's own message to camps ("Send alert"): shown on each camp's Alerts page as written."""
+        w = self.world
+        targets = [c for c in (camp_ids or sorted(w.camps)) if c in w.camps]
+        out = []
+        for cid in targets:
+            alert = camp_alerts.make(len(self.alerts) + 1, cid, w.sim_time, "broadcast", "", "", (message, ""))
+            self.alerts.append(alert)
+            self.broadcast("camp.alert", alert)
+            out.append(alert)
+        names = ", ".join(w.camps[c].name.replace(" Relief Camp", "") for c in targets)
+        w.bus.log(
+            "human",
+            "alert.broadcast",
+            f"{who('Command')} sent an alert to {len(targets)} camp{'s' if len(targets) != 1 else ''} "
+            f'({names}): "{message}"',
+            "Shown on each camp coordinator's Alerts page.",
+            camp_ids=targets,
+        )
+        return out
+
     # ------------------------------------------------------------ roles (doc 10 C)
     def new_field_report(self, camp_id: str, text: str, origin: str = "camp") -> FieldReport:
         w = self.world

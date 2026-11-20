@@ -7,7 +7,7 @@ import time
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.agents.copilot import ask, freeze
 from app.agents.field_intake import load_demo_reports
@@ -19,6 +19,7 @@ from app.config import get_settings
 from app.geo.hazards import hazard_from_preset
 from app.llm.journal import JOURNAL
 from app.models import ApprovalPolicy, Supplies
+from app.services.weather import HEAVY_RAIN_MM_24H, rain_24h
 from app.sim.live import get_live
 from app.sim.scenario import list_cases, load_scenario
 
@@ -139,6 +140,41 @@ async def scenario() -> dict:
         "constants": sc.constants | {"status_thresholds": {"critical_below_days": 0.5, "low_below_days": 1.0}},
         "timeline": sc.raw["timeline"],
         "case": sc.raw["case"],
+    }
+
+
+class BroadcastBody(BaseModel):
+    message: str = Field(min_length=1, max_length=280)
+    camp_ids: list[str] | None = None
+
+
+@router.post("/alerts/broadcast", dependencies=OFFICER)
+async def alerts_broadcast(body: BroadcastBody) -> dict:
+    """Command's message to every camp (or the listed ones); each coordinator sees it under Alerts."""
+    live = get_live()
+    bad = [c for c in body.camp_ids or [] if c not in live.world.camps]
+    if bad:
+        raise HTTPException(422, f"unknown camp {bad[0]}")
+    sent = live.broadcast_alert(body.message.strip(), body.camp_ids)
+    live.touch()
+    return {"sent": len(sent)}
+
+
+@router.get("/weather", dependencies=[AnyUser])
+async def weather() -> dict:
+    """Next-24 h rainfall per district (Open-Meteo, or the bundled cache offline) and the heavy-rain threshold."""
+    s = get_settings()
+    sc = load_scenario()
+    mm = await asyncio.to_thread(rain_24h, sc.raw["district_centroids"], s.weather_mode)
+    return {
+        "source": "Open-Meteo live forecast"
+        if s.weather_mode == "live"
+        else "Open-Meteo forecast (cached sample, offline)",
+        "threshold_mm": HEAVY_RAIN_MM_24H,
+        "districts": sorted(
+            ({"district": d, "rain_24h_mm": v, "heavy": v >= HEAVY_RAIN_MM_24H} for d, v in mm.items()),
+            key=lambda x: -x["rain_24h_mm"],
+        ),
     }
 
 

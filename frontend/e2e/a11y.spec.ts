@@ -28,3 +28,20 @@ for (const [name, path, login] of [
     expect(bad).toEqual([])
   })
 }
+
+// The Command Center in both themes (dark mode flips the colour scale, so check contrast there too).
+for (const theme of ['light', 'dark'] as const) {
+  test(`a11y: command center (${theme}) has no serious or critical axe violations`, async ({ page }) => {
+    await page.addInitScript((t) => localStorage.setItem('rahatnet.theme', t), theme)
+    await page.goto('/login')
+    await page.getByTestId('demo-officer').click()
+    await expect(page.getByTestId('page-title')).toBeVisible()
+    await page.goto('/officer/operations')
+    await expect(page.getByTestId('intel')).toBeVisible()
+    await page.waitForTimeout(500)
+    const res = await new AxeBuilder({ page }).exclude('.leaflet-container').analyze()
+    const bad = res.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')
+    for (const v of res.violations) console.log(`  [${v.impact}] ${v.id}: ${v.help} (${v.nodes.length}) ${v.nodes.slice(0, 4).map((n) => n.target).join(' | ')}`)
+    expect(bad).toEqual([])
+  })
+}

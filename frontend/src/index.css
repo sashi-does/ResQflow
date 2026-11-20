@@ -30,24 +30,24 @@
 }
 
 .dark {
-  --background: #020617;
+  --background: #070d1a;
   --foreground: #f1f5f9;
   --card: #0f172a;
   --card-foreground: #f1f5f9;
-  --popover: #0f172a;
+  --popover: #111c30;
   --popover-foreground: #f1f5f9;
-  --primary: #3b82f6;
-  --primary-foreground: #ffffff;
+  --primary: #14b8a6;
+  --primary-foreground: #04201d;
   --secondary: #1e293b;
   --secondary-foreground: #f1f5f9;
   --muted: #1e293b;
   --muted-foreground: #94a3b8;
-  --accent: #172554;
-  --accent-foreground: #dbeafe;
+  --accent: #0b3b38;
+  --accent-foreground: #ccfbf1;
   --destructive: #ef4444;
-  --border: #1e293b;
+  --border: #23314a;
   --input: #334155;
-  --ring: #1d4ed8;
+  --ring: #2dd4bf;
 }
 
 /* Brand: deep teal (water, relief). Blue stays for map water/flood only; red/amber/green for status only. */
@@ -361,4 +361,90 @@
     from { left: -6px; }
     to { left: 100%; }
   }
+}
+
+/* ---------- dark theme ----------
+   Components keep their light classes; in dark mode the neutral (slate) scale is flipped and the status / brand tints
+   (50–200 backgrounds, 700–900 text) become dark tints and light text. 300–600 stay, so solid buttons and dots don't change. */
+.dark {
+  color-scheme: dark;
+  --color-slate-50: #070d1a;
+  --color-slate-100: #1a2538;
+  --color-slate-200: #23314a;
+  --color-slate-300: #34445f;
+  --color-slate-400: #64748b;
+  --color-slate-500: #94a3b8;
+  --color-slate-600: #a9b6c8;
+  --color-slate-700: #cbd5e1;
+  --color-slate-800: #e2e8f0;
+  --color-slate-900: #f1f5f9;
+  --color-slate-950: #f8fafc;
+  --color-brand-50: #062b29;
+  --color-brand-100: #0a3a37;
+  --color-brand-200: #115e59;
+  --color-brand-700: #5eead4;
+  --color-brand-800: #99f6e4;
+  --color-brand-900: #ccfbf1;
+  --color-red-50: #2b1115;
+  --color-red-100: #3d151a;
+  --color-red-200: #6b1f27;
+  --color-red-700: #fca5a5;
+  --color-red-800: #fecaca;
+  --color-red-900: #fee2e2;
+  --color-amber-50: #2a1e07;
+  --color-amber-100: #3b2a09;
+  --color-amber-200: #6b4b10;
+  --color-amber-700: #fcd34d;
+  --color-amber-800: #fde68a;
+  --color-amber-900: #fef3c7;
+  --color-emerald-50: #052b1e;
+  --color-emerald-100: #06402d;
+  --color-emerald-200: #065f46;
+  --color-emerald-700: #6ee7b7;
+  --color-emerald-800: #a7f3d0;
+  --color-violet-50: #24104f;
+  --color-violet-700: #c4b5fd;
+}
+.dark .bg-white {
+  background-color: var(--card);
+}
+.dark .bg-white\/95 {
+  background-color: color-mix(in oklab, var(--card) 95%, transparent);
+}
+.dark .leaflet-container {
+  background: #1b2433;
+}
+.dark .leaflet-tooltip,
+.dark .leaflet-tooltip.flash-label {
+  background: #111c30;
+  border-color: #34445f;
+  color: #f1f5f9;
+}
+.dark .leaflet-tooltip-top::before {
+  border-top-color: #111c30;
+}
+.dark .leaflet-tooltip.node-label {
+  color: #cbd5e1;
+  text-shadow: 0 0 3px #000, 0 0 3px #000;
+}
+.dark .leaflet-tooltip.hazard-label {
+  background: #0c1d3a;
+  border-color: #1d4ed8;
+  color: #bfdbfe;
+}
+.dark .leaflet-control-attribution {
+  background: rgb(15 23 42 / 0.8) !important;
+  color: #94a3b8;
+}
+.dark .leaflet-control-attribution a {
+  color: #cbd5e1;
+}
+.dark .truck-icon {
+  background: #111c30;
+  border-color: #34445f;
+  color: #f1f5f9;
+}
+.dark .wh-icon {
+  background: #e2e8f0;
+  border-color: #0f172a;
 }

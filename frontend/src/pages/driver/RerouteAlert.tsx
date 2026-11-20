@@ -18,8 +18,8 @@ export function RerouteAlert() {
         <h2 id="reroute-title" className="mt-4 text-3xl font-bold">
           Route changed
         </h2>
-        <p className="mt-4 text-lg leading-relaxed text-red-50">{alert.message.replace(/^Route changed\. /, '')}</p>
-        <p className="mt-3 text-sm text-red-100">Sent by the Routing agent at {alert.at}</p>
+        <p className="mt-4 text-lg leading-relaxed text-white/95">{alert.message.replace(/^Route changed\. /, '')}</p>
+        <p className="mt-3 text-sm text-white/80">Sent by the Routing agent at {alert.at}</p>
         <button
           className="mt-8 w-full rounded-xl bg-white py-4 text-xl font-bold text-red-800 hover:bg-red-50 focus-visible:ring-4 focus-visible:ring-white/60 focus-visible:outline-none"
           disabled={busy}

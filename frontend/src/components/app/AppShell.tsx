@@ -21,6 +21,9 @@ import { pagesFor, pathOf, type PageDef } from '../../lib/nav'
 import { navigate, usePath } from '../../router'
 import { useStore } from '../../store'
 import { Logo } from './Logo'
+import { Notifications } from './Notifications'
+import { SearchPalette } from './SearchPalette'
+import { ThemeToggle } from './ThemeToggle'
 
 const COLLAPSE_KEY = 'rahatnet.sidebar.collapsed'
 
@@ -252,9 +255,14 @@ export function AppShell({ session, page, children }: { session: Session; page: 
           >
             {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
           </Button>
-          <div className="ml-auto">
+          <div className="min-w-0 flex-1 px-1 sm:px-2">
+            <SearchPalette session={session} />
+          </div>
+          <div className="hidden md:block">
             <Clock />
           </div>
+          <Notifications session={session} />
+          <ThemeToggle />
         </div>
         {everConnected && !connected && (
           <div className="border-b border-amber-200 bg-amber-50 px-6 py-2 text-sm text-amber-800" data-testid="connection-banner">

@@ -68,11 +68,17 @@ export interface CampAlert {
   id: string
   camp_id: string
   sim_time: string
-  kind: 'dispatch' | 'delay' | 'arrival'
+  kind: 'dispatch' | 'delay' | 'arrival' | 'broadcast'
   order_id: string
   truck_id: string
   en: string
   as: string
+}
+
+export interface Weather {
+  source: string
+  threshold_mm: number
+  districts: { district: string; rain_24h_mm: number; heavy: boolean }[]
 }
 
 export interface Trip {
@@ -116,6 +122,8 @@ export const api = {
   cases: () => req<DemoCase[]>('GET', '/cases'),
   llmCalls: (limit = 50) => req<LLMCall[]>('GET', `/llm-calls?limit=${limit}`),
   llmCall: (id: string) => req<LLMCall>('GET', `/llm-calls/${id}`),
+  broadcastAlert: (message: string, camp_ids?: string[]) => req<{ sent: number }>('POST', '/alerts/broadcast', { message, camp_ids }),
+  weather: () => req<Weather>('GET', '/weather'),
   historyRuns: () => req<HistoryRuns>('GET', '/history/runs'),
   historyLog: (runId: string) => req<LogEntry[]>('GET', `/history/runs/${runId}/log`),
   trigger: (preset_id: string) => req<Hazard>('POST', '/hazards/trigger', { preset_id }),

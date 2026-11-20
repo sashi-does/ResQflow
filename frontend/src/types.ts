@@ -199,6 +199,7 @@ export interface Hazard {
   verified?: boolean
   source?: string
   reported_by?: string[]
+  created_at_sim?: number
 }
 
 export type OrderStatus = 'proposed' | 'awaiting_approval' | 'dispatched' | 'delivered' | 'rejected' | 'failed'

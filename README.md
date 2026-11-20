@@ -30,7 +30,7 @@ its own login (sessionStorage), so you can open four tabs side by side, one per 
 
 | Role | Demo login | Pages |
 |---|---|---|
-| District Officer | `officer` (Ritu Baruah) | Overview · Live Operations · Approvals · Field Reports · AI Agents · Ask RahatNet · Reports · Simulation *(demo tools: the only page with sim controls)* |
+| District Officer | `officer` (Ritu Baruah) | Overview · Command Center · Approvals · Field Reports · AI Agents · Ask RahatNet · Reports · Simulation *(demo tools: the only page with sim controls)* |
 | Camp Coordinator | `camp.majuli` (Mousumi Gogoi), `camp.morigaon` (Anil Das) | My Camp · Send Report (Assamese/English, Field Intake AI) · Deliveries (confirm received) · Alerts (Assamese + English) |
 | Truck Driver | `driver.t3` (Bikash Kalita) | My Trip (+ full-screen re-route alert → Acknowledge) · Report Road · History |
 | Warehouse Manager | `wh.nagaon` (Pranjal Saikia) | Stock (vs 20% safety reserve) · Loading Queue (Mark loaded) · Receive Stock |
@@ -117,6 +117,13 @@ Same map, warehouses, camps and trucks; a different flood day each time (**Simul
 
 Honest gaps: in `northbank` one truck is stranded ~7 h when the Majuli ferry stops and no safe road is left; in `surge`
 food is not better (Barpeta is cut off for 5 hours in both runs).
+
+## Command Center and everyday tools
+
+The officer's **Command Center** puts active incidents (worst first), the live map, rain and risk tiles, the trucks and
+**suggested actions** (approve, verify a road report, alert a cut-off camp, warn a district with heavy rain) in one frame,
+with full screen. Every role gets **notifications** (bell, unread count), **⌘K search**, and a **light/dark theme**; the
+officer can **send an alert** to all camps, camps at risk, or chosen camps.
 
 ## Seeing the agents coordinate, and keeping history
 

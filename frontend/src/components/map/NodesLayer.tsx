@@ -22,7 +22,7 @@ export function NodesLayer({ nodes }: { nodes: Node[] }) {
           center={[n.lat, n.lon]}
           radius={2.5}
           interactive={false}
-          pathOptions={{ color: '#cbd5e1', fillColor: '#cbd5e1', fillOpacity: 1, weight: 1 }}
+          pathOptions={{ color: '#ffffff', fillColor: '#64748b', fillOpacity: 1, weight: 1 }}
         >
           <Tooltip
             direction={LABEL_DIR[n.id] ?? 'right'}

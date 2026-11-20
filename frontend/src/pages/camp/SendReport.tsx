@@ -1,4 +1,4 @@
-import { Bot, CircleCheck, Clock, Languages, Loader2, Mic, Send } from 'lucide-react'
+import { Bot, CircleCheck, Clock, Loader2, Mic, Send } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -40,11 +40,11 @@ function ReportCard({ r, highlight, scrollTo }: { r: FieldReport; highlight?: bo
     if (scrollTo) ref.current?.scrollIntoView({ block: 'start' }) // on a phone the answer is below the form
   }, [scrollTo])
   return (
-    <Card ref={ref} className={highlight ? 'border-blue-200 py-4 ring-2 ring-blue-100' : 'py-4'} data-testid="field-report">
+    <Card ref={ref} className={highlight ? 'border-brand-200 py-4 ring-2 ring-brand-100' : 'py-4'} data-testid="field-report">
       <CardContent className="space-y-3 px-4">
         <div className="flex flex-wrap items-center gap-2">
           {highlight && (
-            <span className="flex items-center gap-1 text-sm font-semibold text-blue-700">
+            <span className="flex items-center gap-1 text-sm font-semibold text-brand-700">
               <Bot className="size-4" aria-hidden /> AI understood
             </span>
           )}
@@ -111,7 +111,7 @@ export function CampSendReport() {
         <StatCard label="Reports sent" value={mine.length} icon={Send} tone="blue" />
         <StatCard label="Applied" value={mine.filter((r) => r.status === 'applied' || r.status === 'confirmed').length} icon={CircleCheck} tone="green" />
         <StatCard label="Waiting for the officer" value={mine.filter((r) => r.status === 'pending_confirmation' || r.status === 'unparsed').length} icon={Clock} tone="amber" />
-        <StatCard label="Languages" value={<span className="text-lg">অসমীয়া · English</span>} icon={Languages} tone="blue" />
+        <StatCard label="Last report" value={mine[0]?.sim_time ?? '—'} sub="Assamese or English" />
       </div>
       <Section title={`Report from ${def?.name ?? 'your camp'}`} description="Write the way you normally would. Numbers, needs, health problems: the AI picks them out." className="lg:col-span-7">
         <Textarea

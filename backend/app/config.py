@@ -18,9 +18,11 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=(BACKEND_DIR.parent / ".env", BACKEND_DIR / ".env"), extra="ignore")
 
-    llm_provider: Literal["mock", "anthropic", "openai", "gemini"] = "mock"
+    llm_provider: Literal["mock", "anthropic", "openrouter", "openai", "gemini"] = "mock"
     llm_model: str = "claude-haiku-5-5"
     anthropic_api_key: str = ""
+    openrouter_api_key: str = ""
+    openrouter_base_url: str = "https://openrouter.ai/api"  # OpenRouter's Anthropic-compatible Messages API
     openai_api_key: str = ""
     gemini_api_key: str = ""
     llm_timeout_s: float = 20.0
@@ -38,11 +40,12 @@ class Settings(BaseSettings):
         """The provider actually used: falls back to mock when the chosen provider has no key."""
         keys = {
             "anthropic": self.anthropic_api_key,
+            "openrouter": self.openrouter_api_key,
             "openai": self.openai_api_key,
             "gemini": self.gemini_api_key,
         }
-        # only anthropic is implemented; openai/gemini fall back to mock
-        if self.llm_provider != "anthropic" or not keys.get(self.llm_provider):
+        # anthropic and openrouter (same Messages API) are implemented; openai/gemini fall back to mock
+        if self.llm_provider not in ("anthropic", "openrouter") or not keys.get(self.llm_provider):
             return "mock"
         return self.llm_provider
 

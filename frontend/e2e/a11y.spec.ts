@@ -3,18 +3,21 @@ import { expect, test } from '@playwright/test'
 
 // doc 11: accessibility on the login page and the officer Overview (axe-core, the engine behind Lighthouse's a11y score)
 for (const [name, path, login] of [
+  ['landing', '/', false],
   ['login', '/login', false],
   ['officer overview', '/officer/overview', true],
   ['camp send report (phone)', '/camp/report', true],
 ] as const) {
   test(`a11y: ${name} has no serious or critical axe violations`, async ({ page }) => {
     if (path.startsWith('/camp')) await page.setViewportSize({ width: 390, height: 844 })
-    await page.goto('/login')
+    await page.goto(path === '/' ? '/' : '/login')
     if (login) {
       await page.getByTestId(path.startsWith('/camp') ? 'demo-camp.majuli' : 'demo-officer').click()
       await expect(page.getByTestId('page-title')).toBeVisible()
       await page.goto(path)
       await expect(page.getByTestId('page-title')).toBeVisible()
+    } else if (path === '/') {
+      await expect(page.getByTestId('intro')).toBeVisible()
     } else {
       await expect(page.getByTestId('demo-officer')).toBeVisible()
     }

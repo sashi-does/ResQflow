@@ -5,7 +5,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Light, neutral app theme (doc 11 §2): white / slate-50 surfaces, slate-900 text, one accent (blue-600).
+/* Light, neutral app theme (doc 11 §2): white / slate-50 surfaces, slate-900 text, one brand accent (deep teal, `brand-*`).
    Red / amber / green are reserved for status. The map keeps its dark basemap inside a card. */
 :root {
   --radius: 0.625rem;
@@ -15,18 +15,18 @@
   --card-foreground: #0f172a;
   --popover: #ffffff;
   --popover-foreground: #0f172a;
-  --primary: #2563eb;
+  --primary: #0f766e;
   --primary-foreground: #ffffff;
   --secondary: #f1f5f9;
   --secondary-foreground: #0f172a;
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
-  --accent: #eff6ff;
-  --accent-foreground: #1e3a8a;
+  --accent: #f0fdfa;
+  --accent-foreground: #134e4a;
   --destructive: #dc2626;
   --border: #e2e8f0;
   --input: #cbd5e1;
-  --ring: #93c5fd;
+  --ring: #5eead4;
 }
 
 .dark {
@@ -48,6 +48,22 @@
   --border: #1e293b;
   --input: #334155;
   --ring: #1d4ed8;
+}
+
+/* Brand: deep teal (water, relief). Blue stays for map water/flood only; red/amber/green for status only. */
+@theme {
+  --color-brand-50: #f0fdfa;
+  --color-brand-100: #ccfbf1;
+  --color-brand-200: #99f6e4;
+  --color-brand-300: #5eead4;
+  --color-brand-400: #2dd4bf;
+  --color-brand-500: #14b8a6;
+  --color-brand-600: #0d9488;
+  --color-brand-700: #0f766e;
+  --color-brand-800: #115e59;
+  --color-brand-900: #134e4a;
+  --color-brand-950: #042f2e;
+  --color-ink: #0b1a1f;
 }
 
 @theme inline {
@@ -96,85 +112,97 @@
 }
 
 .leaflet-container {
-  background: #020617;
+  background: #e8ecef;
   font-family: var(--font-sans);
 }
 
-/* ---------- map labels / tooltips ---------- */
+/* ---------- map labels / tooltips (light map) ---------- */
 .leaflet-tooltip {
-  background: rgb(15 23 42 / 0.95);
-  border: 1px solid #334155;
-  color: #e2e8f0;
-  border-radius: 6px;
-  box-shadow: 0 4px 14px rgb(0 0 0 / 0.4);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #0f172a;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgb(15 23 42 / 0.12);
+  padding: 6px 8px;
 }
 .leaflet-tooltip-top::before {
-  border-top-color: #334155;
+  border-top-color: #ffffff;
 }
 .leaflet-tooltip.node-label {
   background: transparent;
   border: none;
   box-shadow: none;
-  color: #cbd5e1;
-  font-size: 10px;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 500;
   padding: 0 2px;
-  text-shadow: 0 0 3px #020617, 0 0 2px #020617;
+  text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 2px #fff;
 }
 .leaflet-tooltip.node-label::before {
   display: none;
 }
 .leaflet-tooltip.hazard-label {
-  background: rgb(30 58 138 / 0.75);
-  padding: 1px 6px;
-  border-color: #60a5fa;
-  color: #dbeafe;
-  font-size: 10px;
+  background: #eff6ff;
+  padding: 2px 8px;
+  border: 1px solid #93c5fd;
+  color: #1e40af;
+  font-size: 11px;
   font-weight: 600;
+  box-shadow: none;
 }
 .leaflet-tooltip.hazard-label::before {
   display: none;
 }
 .leaflet-tooltip.flash-label {
-  background: #052e16;
-  border: 1px solid #4ade80;
-  color: #bbf7d0;
+  background: #ffffff;
+  border: 1.5px solid #059669;
+  color: #065f46;
   font-weight: 600;
   font-size: 12px;
   animation: label-pop 0.4s ease-out;
 }
 .leaflet-tooltip.flash-label::before {
-  border-top-color: #4ade80;
+  border-top-color: #059669;
+}
+.leaflet-control-attribution {
+  font-size: 10px;
+  background: rgb(255 255 255 / 0.8) !important;
 }
 
 /* ---------- markers ---------- */
 .wh-icon {
-  width: 16px;
-  height: 16px;
-  background: #6366f1;
-  border: 2px solid #e0e7ff;
+  width: 14px;
+  height: 14px;
+  background: #0f172a;
+  border: 2px solid #ffffff;
   border-radius: 3px;
-  box-shadow: 0 0 8px #6366f1;
+  box-shadow: 0 1px 4px rgb(15 23 42 / 0.4);
 }
 .truck-icon {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   height: 20px;
-  padding: 0 4px;
-  border: 1.5px solid;
+  padding: 0 6px 0 5px;
+  border: 1px solid #cbd5e1;
   border-radius: 10px;
-  background: #0f172a;
-  color: #e2e8f0;
-  font-size: 10px;
-  font-weight: 700;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 10.5px;
+  font-weight: 600;
   white-space: nowrap;
   width: max-content;
+  box-shadow: 0 1px 4px rgb(15 23 42 / 0.25);
+}
+.truck-icon .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
 }
 
 /* ---------- map effects ---------- */
 .road-blocked {
   animation: road-pulse 1.4s ease-in-out infinite;
-  filter: drop-shadow(0 0 3px #ef4444);
 }
 @keyframes road-pulse {
   0%,
@@ -200,12 +228,10 @@
 @keyframes camp-pulse {
   0%,
   100% {
-    stroke-width: 2.5;
-    stroke-opacity: 1;
+    fill-opacity: 0.9;
   }
   50% {
-    stroke-width: 9;
-    stroke-opacity: 0.35;
+    fill-opacity: 0.45;
   }
 }
 
@@ -215,7 +241,7 @@
   animation:
     march 0.6s linear infinite,
     fade-out 3s ease-in forwards;
-  filter: drop-shadow(0 0 6px #ef4444);
+  filter: drop-shadow(0 0 3px rgb(220 38 38 / 0.6));
 }
 @keyframes march {
   to {
@@ -237,7 +263,7 @@
   animation:
     draw-in 1.6s ease-out forwards,
     glow 0.9s ease-in-out 1.6s 4 alternate;
-  filter: drop-shadow(0 0 8px #22c55e);
+  filter: drop-shadow(0 0 4px rgb(5 150 105 / 0.5));
 }
 @keyframes draw-in {
   to {
@@ -312,5 +338,27 @@
   from {
     opacity: 0;
     transform: translateY(-4px);
+  }
+}
+
+/* ---------- agent pipeline: a dot travels along a live handoff ---------- */
+.handoff-dot {
+  left: -3px;
+  top: 0;
+  animation: handoff-y 0.9s linear infinite;
+}
+@keyframes handoff-y {
+  from { top: -6px; }
+  to { top: 100%; }
+}
+@media (min-width: 1024px) {
+  .handoff-dot {
+    top: -2.5px;
+    left: 0;
+    animation: handoff-x 0.9s linear infinite;
+  }
+  @keyframes handoff-x {
+    from { left: -6px; }
+    to { left: 100%; }
   }
 }

@@ -14,10 +14,10 @@ export function HazardsLayer() {
             data={h.polygon as GeoJSON.Polygon}
             interactive
             style={() => ({
-              color: selected?.includes(h.id) ? '#facc15' : '#60a5fa',
+              color: selected?.includes(h.id) ? '#f59e0b' : '#2563eb',
               weight: 1.5,
               fillColor: '#3b82f6',
-              fillOpacity: 0.35,
+              fillOpacity: 0.22,
               className: 'hazard-poly',
             })}
           >

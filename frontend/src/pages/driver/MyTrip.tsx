@@ -35,7 +35,7 @@ export function DriverMyTrip() {
           <ol className="space-y-3" data-testid="route-steps">
             {roads.map((r, i) => (
               <li key={`${r.edge_id}-${i}`} className="flex items-start gap-3">
-                <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold', r.blocked ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700')}>{i + 1}</span>
+                <span className={cn('flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold', r.blocked ? 'bg-red-100 text-red-700' : 'bg-brand-100 text-brand-700')}>{i + 1}</span>
                 <div>
                   <div className={cn('font-semibold', r.blocked ? 'text-red-700' : 'text-slate-900')}>{r.road}</div>
                   <div className="text-sm text-slate-500">

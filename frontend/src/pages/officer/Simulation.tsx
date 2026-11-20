@@ -64,7 +64,7 @@ export function OfficerSimulation() {
                   key={sp}
                   onClick={() => api.speed(sp).catch(fail)}
                   aria-pressed={sim?.speed === sp}
-                  className={cn('rounded px-3 py-1 text-sm font-medium', sim?.speed === sp ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100')}
+                  className={cn('rounded px-3 py-1 text-sm font-medium', sim?.speed === sp ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-100')}
                 >
                   <FastForward className="mr-1 inline size-3.5" aria-hidden />
                   {sp}×
@@ -107,10 +107,10 @@ export function OfficerSimulation() {
                 key={p.id}
                 disabled={on}
                 onClick={() => api.trigger(p.id).then(() => toast(`Flood reported: ${p.label}`, 'warn'), fail)}
-                className={cn('flex items-start gap-3 rounded-lg border p-3 text-left transition-colors', on ? 'border-red-200 bg-red-50' : 'hover:border-blue-300 hover:bg-blue-50/40')}
+                className={cn('flex items-start gap-3 rounded-lg border p-3 text-left transition-colors', on ? 'border-red-200 bg-red-50' : 'hover:border-brand-300 hover:bg-brand-50/40')}
                 data-testid={`trigger-${p.id}`}
               >
-                <Waves className={cn('mt-0.5 size-5 shrink-0', on ? 'text-red-600' : 'text-blue-600')} aria-hidden />
+                <Waves className={cn('mt-0.5 size-5 shrink-0', on ? 'text-red-600' : 'text-brand-600')} aria-hidden />
                 <span className="min-w-0">
                   <span className="block text-sm font-semibold text-slate-900">
                     {p.label} <kbd className="ml-1 rounded border px-1 text-[10px] text-slate-500">{p.key}</kbd>
@@ -168,7 +168,7 @@ export function OfficerSimulation() {
         }
         className="lg:col-span-12"
       >
-        <OpsMap className="h-[420px]" />
+        <OpsMap className="h-[420px]" compact />
       </Section>
     </PageGrid>
   )

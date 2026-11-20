@@ -5,7 +5,7 @@ import { fmtDuration } from '../../lib/format'
 import type { Flash } from '../../store'
 import { useStore } from '../../store'
 
-/** The money shot: old route flashes red and fades, new safe route draws itself in bright green. */
+/** The money shot: old route flashes red and fades, new safe route draws itself in green. */
 function FlashPaths({ flash }: { flash: Flash }) {
   const map = useMap()
   const [phase, setPhase] = useState<'old' | 'both' | 'new'>('old')
@@ -39,7 +39,7 @@ function FlashPaths({ flash }: { flash: Flash }) {
           positions={flash.oldPath}
           className="flash-old"
           interactive={false}
-          pathOptions={{ color: '#ef4444', weight: 6, opacity: 1 }}
+          pathOptions={{ color: '#dc2626', weight: 5, opacity: 1 }}
         />
       )}
       {phase !== 'old' && flash.newPath.length > 1 && (
@@ -48,7 +48,7 @@ function FlashPaths({ flash }: { flash: Flash }) {
           className="flash-new"
           interactive={false}
           eventHandlers={{ add: setPathLength }}
-          pathOptions={{ color: '#4ade80', weight: 6, opacity: 1 }}
+          pathOptions={{ color: '#059669', weight: 5, opacity: 1 }}
         >
           {mid && (
             <Tooltip permanent direction="top" className="flash-label">

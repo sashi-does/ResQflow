@@ -95,12 +95,12 @@ export function CampMyCamp() {
           <ul className="divide-y">
             {incoming.map((t) => (
               <li key={t.id} className="flex items-center gap-3 py-2.5 text-sm">
-                <Truck className="size-4 text-blue-600" aria-hidden />
+                <Truck className="size-4 text-brand-600" aria-hidden />
                 <div className="min-w-0 flex-1">
                   <div className="font-medium text-slate-900">{truckLabel(t.id)}</div>
                   <div className="text-slate-500">{t.job ? fmtItems(t.job.items) : ''}</div>
                 </div>
-                <div className="text-right font-semibold text-blue-700 tnum">
+                <div className="text-right font-semibold text-brand-700 tnum">
                   {t.status === 'loading' ? 'Loading' : t.eta_sim_seconds && sim ? `ETA ${fmtDuration((t.eta_sim_seconds - sim.sim_seconds) / 60)}` : 'On the road'}
                 </div>
               </li>

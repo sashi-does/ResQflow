@@ -17,7 +17,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: `cd ../backend && SIM_SPEED=600 uv run uvicorn app.main:app --port ${BACKEND_PORT}`,
+      command: `cd ../backend && LLM_PROVIDER=mock SIM_SPEED=600 uv run uvicorn app.main:app --port ${BACKEND_PORT}`,
       url: `http://localhost:${BACKEND_PORT}/api/health`,
       reuseExistingServer: false,
       timeout: 60_000,

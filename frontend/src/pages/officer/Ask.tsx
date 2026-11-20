@@ -1,5 +1,5 @@
 import { KeyRound, Loader2, Lock, Search, Sparkles } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -11,11 +11,15 @@ const EXAMPLES = ['Why isn’t Morigaon getting supplies?', 'What happens if NH-
 
 export function OfficerAsk() {
   const health = useStore((s) => s.health)
+  const setHealth = useStore((s) => s.setHealth)
+  useEffect(() => {
+    api.health().then(setHealth, () => undefined) // the key may have been disabled since load (e.g. no credits)
+  }, [setHealth])
   const toast = useStore((s) => s.toast)
   const [q, setQ] = useState('')
   const [busy, setBusy] = useState(false)
   const [answers, setAnswers] = useState<(CopilotAnswer & { q: string })[]>([])
-  const offline = health?.llm_provider === 'mock'
+  const offline = health?.llm_provider === 'mock' || !!health?.llm_disabled
   const ask = (question: string) => {
     if (!question.trim() || busy) return
     setBusy(true)
@@ -32,7 +36,7 @@ export function OfficerAsk() {
   return (
     <PageGrid>
       <StatGrid>
-        <StatCard label="AI model" value={<span className="text-lg">{offline ? 'Needs API key' : (health?.llm_model ?? '—')}</span>} sub={offline ? 'running in offline mode' : 'answers from live data'} icon={offline ? KeyRound : Sparkles} tone={offline ? 'amber' : 'blue'} />
+        <StatCard label="AI model" value={<span className="text-lg">{health?.llm_disabled ? 'AI offline' : offline ? 'Needs API key' : (health?.llm_model ?? '—')}</span>} sub={offline ? 'running in offline mode' : 'answers from live data'} icon={offline ? KeyRound : Sparkles} tone={offline ? 'amber' : 'blue'} />
         <StatCard label="Access" value="Read-only" sub="it can look things up, never change them" icon={Lock} tone="green" />
         <StatCard label="Questions asked" value={answers.length} sub="this session" icon={Search} tone="blue" />
         <StatCard label="Live lookups used" value={lookups} sub="every fact comes from a lookup" icon={Search} tone="blue" />
@@ -59,7 +63,10 @@ export function OfficerAsk() {
         </div>
         {offline && (
           <p className="mt-3 flex items-center gap-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            <KeyRound className="size-4" aria-hidden /> Offline mode: answering needs an API key (set ANTHROPIC_API_KEY). Everything else in RahatNet works without one.
+            <KeyRound className="size-4" aria-hidden />
+            {health?.llm_disabled
+              ? `AI is offline: ${health.llm_disabled}. Everything else in RahatNet keeps working.`
+              : 'Offline mode: answering needs an API key. Everything else in RahatNet works without one.'}
           </p>
         )}
       </Section>
@@ -96,7 +103,7 @@ export function OfficerAsk() {
                 </div>
               )}
               {a.model && (
-                <div className="text-xs text-slate-400">
+                <div className="text-xs text-slate-500">
                   {a.model}
                   {a.latency_ms ? ` · ${(a.latency_ms / 1000).toFixed(1)} s` : ''}
                 </div>

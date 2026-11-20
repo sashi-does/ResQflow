@@ -45,6 +45,7 @@ export interface Health {
   ok: boolean
   llm_provider: string
   llm_model: string
+  llm_disabled?: string | null
   weather_mode: string
   demo_inject_fault: boolean
   version: string

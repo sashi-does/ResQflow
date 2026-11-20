@@ -1,69 +1,61 @@
+import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 import { CAMP_COLORS, TRUCK_COLORS } from '../lib/format'
 
-function Swatch({ color, ring = false }: { color: string; ring?: boolean }) {
-  return (
-    <span
-      className="inline-block h-3 w-3 rounded-full"
-      style={ring ? { border: `2px solid ${color}`, background: `${color}66` } : { background: color }}
-    />
-  )
+function Dot({ color }: { color: string }) {
+  return <span className="inline-block size-2.5 rounded-full ring-2 ring-white" style={{ background: color }} />
 }
 
-function Line({ color, dashed = false, glow = false }: { color: string; dashed?: boolean; glow?: boolean }) {
+function Line({ color, dashed = false, width = 2.5 }: { color: string; dashed?: boolean; width?: number }) {
   return (
-    <svg width="22" height="8" className="shrink-0">
-      <line
-        x1="1"
-        y1="4"
-        x2="21"
-        y2="4"
-        stroke={color}
-        strokeWidth={glow ? 3.5 : 2.5}
-        strokeDasharray={dashed ? '4 3' : undefined}
-        style={glow ? { filter: `drop-shadow(0 0 3px ${color})` } : undefined}
-      />
+    <svg width="22" height="8" className="shrink-0" aria-hidden>
+      <line x1="1" y1="4" x2="21" y2="4" stroke={color} strokeWidth={width} strokeDasharray={dashed ? '4 3' : undefined} />
     </svg>
   )
 }
 
-export function Legend() {
-  const [open, setOpen] = useState(true)
+function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="absolute right-3 bottom-3 z-[1000] w-60 rounded-lg border border-slate-700 bg-slate-900/90 text-xs shadow-xl backdrop-blur" data-testid="legend">
-      <button className="flex w-full items-center px-3 py-1.5 font-semibold text-slate-300" onClick={() => setOpen(!open)}>
-        Legend <span className="ml-auto text-slate-500">{open ? '▾' : '▴'}</span>
+    <div>
+      <div className="mb-1 text-[10px] font-semibold tracking-wider text-slate-500 uppercase">{title}</div>
+      <div className="grid grid-cols-2 gap-x-2 gap-y-1">{children}</div>
+    </div>
+  )
+}
+
+function Item({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
+  return <div className={`flex items-center gap-1.5 whitespace-nowrap ${wide ? 'col-span-2' : ''}`}>{children}</div>
+}
+
+/** Map legend, always visible on any map (doc 11). Collapsible to a single row. */
+export function Legend({ defaultOpen = true }: { defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div className="absolute right-3 bottom-6 z-[1000] w-56 rounded-lg border border-slate-200 bg-white/95 text-xs text-slate-700 shadow-sm backdrop-blur" data-testid="legend">
+      <button className="flex w-full items-center px-3 py-2 font-medium text-slate-900" onClick={() => setOpen(!open)} aria-expanded={open}>
+        Legend <ChevronDown className={`ml-auto size-3.5 text-slate-500 transition-transform ${open ? '' : '-rotate-90'}`} aria-hidden />
       </button>
       {open && (
-        <ul className="space-y-1 px-3 pb-2 text-[11px] text-slate-300">
-          <li className="flex items-center gap-2">
-            <span className="wh-icon !h-3 !w-3" /> Warehouse
-          </li>
-          <li className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-            <span className="w-11 text-slate-500">Camps</span>
-            <Swatch color={CAMP_COLORS.ok} ring /> ok
-            <Swatch color={CAMP_COLORS.low} ring /> &lt;1 d
-            <Swatch color={CAMP_COLORS.critical} ring /> &lt;0.5 d
-            <Swatch color={CAMP_COLORS.cut_off} ring /> cut off
-          </li>
-          <li className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-            <span className="w-11 text-slate-500">Trucks</span>
-            <Swatch color={TRUCK_COLORS.en_route} /> delivering
-            <Swatch color={TRUCK_COLORS.returning} /> returning
-            <Swatch color={TRUCK_COLORS.loading} /> loading
-            <Swatch color={TRUCK_COLORS.holding} /> holding
-          </li>
-          <li className="flex items-center gap-2">
-            <Line color="#ef4444" dashed /> Road closed (flooded)
-          </li>
-          <li className="flex items-center gap-2">
-            <span className="inline-block h-3 w-5 rounded-sm border border-blue-400 bg-blue-500/35" /> Flood zone
-          </li>
-          <li className="flex items-center gap-2">
-            <Line color="#4ade80" glow /> New safe route
-            <Line color="#38bdf8" dashed /> ferry
-          </li>
-        </ul>
+        <div className="space-y-2 border-t border-slate-100 px-3 py-2">
+          <Group title="Camps">
+            <Item><Dot color={CAMP_COLORS.ok} /> OK</Item>
+            <Item><Dot color={CAMP_COLORS.low} /> Low</Item>
+            <Item><Dot color={CAMP_COLORS.critical} /> Critical</Item>
+            <Item><Dot color={CAMP_COLORS.cut_off} /> Cut off</Item>
+          </Group>
+          <Group title="Trucks">
+            <Item><Dot color={TRUCK_COLORS.en_route} /> Delivering</Item>
+            <Item><Dot color={TRUCK_COLORS.loading} /> Loading</Item>
+            <Item><Dot color={TRUCK_COLORS.holding} /> Holding</Item>
+            <Item><span className="wh-icon !size-3" /> Warehouse</Item>
+          </Group>
+          <Group title="Roads">
+            <Item wide><Line color="#0d9488" width={3} /> Active route</Item>
+            <Item wide><Line color="#dc2626" dashed /> Closed by flood</Item>
+            <Item><span className="inline-block h-3 w-5 rounded-sm border border-blue-600 bg-blue-500/25" /> Flood</Item>
+            <Item><Line color="#0284c7" dashed width={2} /> Ferry</Item>
+          </Group>
+        </div>
       )}
     </div>
   )

@@ -39,6 +39,14 @@ JWT (HS256, 12 h) with bcrypt-hashed seeded users in SQLite. Every endpoint chec
 coordinator can't report for Majuli → 403), the WebSocket only sends each role what it may see (a driver gets only
 its own truck), and every human action is attributed by name in the decision log. Set `JWT_SECRET` in production.
 
+## Using a real model
+Put a key in `.env` (git-ignored):
+```
+LLM_PROVIDER=anthropic          # or openrouter
+ANTHROPIC_API_KEY=...           # or OPENROUTER_API_KEY=... with LLM_MODEL=anthropic/claude-haiku-5.5
+```
+If the key is rejected or the account has no credits, RahatNet logs it once and keeps running offline.
+
 ## Where the AI is, and how it is kept honest
 - **Coordinator** (Claude, `LLM_MODEL`, default `claude-haiku-5-5`) proposes the allocation plan; a deterministic **validator** checks every
   plan, rejections go back with the violations (max 2 retries), then a heuristic planner takes over. Large/critical orders go to a human.

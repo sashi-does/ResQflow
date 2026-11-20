@@ -21,7 +21,11 @@ export async function as(request: APIRequestContext, username = 'officer') {
 }
 
 /** Collects console errors and page errors (must stay empty). */
+// External map tiles can fail when the internet drops; those are the network's errors, not the app's.
+const NETWORK = /net::ERR_(INTERNET_DISCONNECTED|NETWORK_CHANGED|NAME_NOT_RESOLVED|CONNECTION_RESET|TIMED_OUT)/
+
 export function watchErrors(page: Page, errors: string[], ignore: RegExp[] = []): void {
+  ignore = [...ignore, NETWORK]
   page.on('console', (m) => {
     if (m.type() === 'error' && !ignore.some((r) => r.test(m.text()))) errors.push(`[${page.url()}] ${m.text()}`)
   })

@@ -37,9 +37,9 @@ export function RoutesLayer() {
               positions={pts}
               interactive={false}
               pathOptions={{
-                color: delivering ? '#34d399' : '#38bdf8',
-                weight: delivering ? 2.5 : 1.5,
-                opacity: delivering ? 0.75 : 0.45,
+                color: delivering ? '#0d9488' : '#64748b',
+                weight: delivering ? 3 : 1.5,
+                opacity: delivering ? 0.85 : 0.5,
                 dashArray: delivering ? undefined : '3 6',
               }}
             />

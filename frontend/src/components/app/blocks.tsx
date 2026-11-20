@@ -5,12 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardAction }
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
-/** The "what's the situation" cards every page starts with. */
+/** The "what's the situation" cards every page starts with. Numbers are neutral; colour only when the status means
+ *  something (red = act now, amber = watch). Icons are optional and small, never decorative tiles. */
 export function StatCard({
   label,
   value,
   sub,
-  icon: Icon,
   tone,
   testId,
 }: {
@@ -21,21 +21,13 @@ export function StatCard({
   tone?: 'red' | 'amber' | 'green' | 'blue'
   testId?: string
 }) {
-  const color = { red: 'text-red-600', amber: 'text-amber-600', green: 'text-emerald-600', blue: 'text-blue-600' }[tone ?? 'blue']
-  const bg = { red: 'bg-red-50', amber: 'bg-amber-50', green: 'bg-emerald-50', blue: 'bg-blue-50' }[tone ?? 'blue']
+  const color = tone === 'red' ? 'text-red-600' : tone === 'amber' ? 'text-amber-600' : 'text-slate-900'
   return (
-    <Card className="gap-2 py-4" data-testid={testId}>
-      <CardContent className="flex items-start gap-3 px-4">
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-medium text-muted-foreground">{label}</div>
-          <div className={cn('mt-1 text-2xl font-semibold tnum', tone ? color : 'text-foreground')}>{value}</div>
-          {sub && <div className="mt-1 text-xs text-muted-foreground">{sub}</div>}
-        </div>
-        {Icon && (
-          <div className={cn('flex size-9 shrink-0 items-center justify-center rounded-lg', bg)}>
-            <Icon className={cn('size-5', color)} aria-hidden />
-          </div>
-        )}
+    <Card className="gap-0 py-4" data-testid={testId}>
+      <CardContent className="px-5">
+        <div className="text-[13px] font-medium text-slate-500">{label}</div>
+        <div className={cn('mt-1.5 text-[26px] leading-8 font-semibold tracking-tight tnum', color)}>{value}</div>
+        {sub && <div className="mt-1 text-xs text-slate-500">{sub}</div>}
       </CardContent>
     </Card>
   )

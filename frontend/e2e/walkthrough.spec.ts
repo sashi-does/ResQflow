@@ -12,6 +12,13 @@ test('walkthrough: 4 roles in 4 windows, every page, cross-role updates within 2
   // 01 login page
   const anon = await browser.newContext({ viewport: { width: 1440, height: 900 }, baseURL: 'http://localhost:5174' })
   const lp = await anon.newPage()
+  await lp.goto('/')
+  await expect(lp.getByTestId('intro')).toBeVisible()
+  await lp.waitForFunction(() => document.images[0]?.complete && document.images[0].naturalWidth > 0)
+  await shot(lp, '00-landing')
+  await lp.getByTestId('intro').evaluate((el) => el.scrollTo({ top: 760 }))
+  await lp.waitForTimeout(1200) // lazy images below the fold load once scrolled into view
+  await shot(lp, '00b-landing-story')
   await lp.goto('/login')
   await expect(lp.getByTestId('demo-officer')).toBeVisible()
   await shot(lp, '01-login')
@@ -94,6 +101,9 @@ test('walkthrough: 4 roles in 4 windows, every page, cross-role updates within 2
   await expect(o.getByTestId('agents-view')).toBeVisible()
   await expect(o.getByTestId('feed').locator('[data-kind="order.approved"]').first()).toContainText('Ritu Baruah')
   await shot(o, '11-officer-ai-agents')
+  await expect(o.getByTestId('coordination-cycle').first()).toBeVisible()
+  await o.getByTestId('coordination-timeline').scrollIntoViewIfNeeded()
+  await shot(o, '11b-officer-ai-agents-timeline')
   await go(o, '/officer/ask')
   await o.getByTestId('copilot-example').first().click()
   await expect(o.getByTestId('copilot-answer').first()).toContainText(/API key|needs/i)

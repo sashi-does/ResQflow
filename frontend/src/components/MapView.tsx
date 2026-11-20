@@ -14,7 +14,7 @@ import { WarehousesLayer } from './map/WarehousesLayer'
 
 const ASSAM_CENTER: [number, number] = [26.6, 92.6]
 
-// Esri World Dark Gray: keyless dark basemap (CARTO now requires an API key).
+// Esri World Light Gray: keyless, quiet basemap that matches the light app (CARTO now requires an API key).
 const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas'
 const ATTRIBUTION = 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors'
 
@@ -43,7 +43,7 @@ export function MapView() {
       zoomControl={false}
       attributionControl
     >
-      <TileLayer url={`${ESRI}/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}`} attribution={ATTRIBUTION} maxZoom={16} />
+      <TileLayer url={`${ESRI}/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}`} attribution={ATTRIBUTION} maxZoom={16} />
       {scenario && (
         <>
           <FitToNodes nodes={scenario.nodes} />

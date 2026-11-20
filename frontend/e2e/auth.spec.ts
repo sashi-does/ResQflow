@@ -64,4 +64,15 @@ test('sim controls exist only on the officer Simulation page', async ({ page }) 
   }
   await page.goto('/officer/simulation')
   await expect(page.getByTestId('run-demo')).toBeVisible()
+
+  // collapsible sidebar: icons only, remembered across reloads
+  const aside = page.getByRole('complementary', { name: 'Sidebar' })
+  await expect(aside).toHaveAttribute('data-collapsed', 'false')
+  await page.getByTestId('sidebar-toggle').click()
+  await expect(aside).toHaveAttribute('data-collapsed', 'true')
+  await expect(page.getByTestId('nav-approvals')).toHaveAttribute('aria-label', 'Approvals')
+  await page.reload()
+  await expect(page.getByRole('complementary', { name: 'Sidebar' })).toHaveAttribute('data-collapsed', 'true')
+  await page.getByTestId('sidebar-toggle').click()
+  await expect(page.getByRole('complementary', { name: 'Sidebar' })).toHaveAttribute('data-collapsed', 'false')
 })

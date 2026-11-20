@@ -1,10 +1,12 @@
-export function Logo({ className = 'size-8' }: { className?: string }) {
+/** RahatNet mark: a river line under a route arrow, in the brand teal. */
+export function Logo({ className = 'size-8', inverted = false }: { className?: string; inverted?: boolean }) {
+  const bg = inverted ? '#ffffff' : '#0f766e'
+  const fg = inverted ? '#0f766e' : '#ffffff'
   return (
     <svg viewBox="0 0 32 32" className={className} aria-hidden>
-      <rect width="32" height="32" rx="8" fill="#2563eb" />
-      <path d="M16 6c-3.6 4.6-6 8.1-6 11a6 6 0 0 0 12 0c0-2.9-2.4-6.4-6-11Z" fill="#fff" />
-      <path d="M12.5 18.5h7" stroke="#2563eb" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="m17 16 2.5 2.5L17 21" stroke="#2563eb" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <rect width="32" height="32" rx="7" fill={bg} />
+      <path d="M6 20.5c2.5 0 2.5-1.8 5-1.8s2.5 1.8 5 1.8 2.5-1.8 5-1.8 2.5 1.8 5 1.8" stroke={fg} strokeWidth="2" fill="none" strokeLinecap="round" />
+      <path d="M8 13h13m-3.5-3.5L21 13l-3.5 3.5" stroke={fg} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }

@@ -10,7 +10,7 @@ import { RoadsLayer } from '../map/RoadsLayer'
 import { TrucksLayer } from '../map/TrucksLayer'
 import { WarehousesLayer } from '../map/WarehousesLayer'
 
-const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}'
 
 function Fit({ pts }: { pts: LatLon[] }) {
   const map = useMap()
@@ -34,24 +34,24 @@ export function FocusMap({ focus, path, ring, className }: { focus: LatLon[]; pa
   const nodes = useMemo(() => new Map((scenario?.nodes ?? []).map((n) => [n.id, n])), [scenario])
   if (!scenario) return <div className={cn('animate-pulse rounded-xl bg-slate-200', className)} />
   return (
-    <div className={cn('relative isolate z-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-950', className)} data-testid="focus-map">
+    <div className={cn('relative isolate z-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100', className)} data-testid="focus-map">
       <MapContainer center={focus[0] ?? [26.6, 92.6]} zoom={8.5} zoomSnap={0.25} className="h-full w-full" zoomControl={false} attributionControl={false}>
         <TileLayer url={ESRI} />
         <HazardsLayer />
         <RoadsLayer edges={scenario.edges} />
-        {path && path.length > 1 && <Polyline positions={path} interactive={false} pathOptions={{ color: '#4ade80', weight: 5, opacity: 0.9 }} />}
+        {path && path.length > 1 && <Polyline positions={path} interactive={false} pathOptions={{ color: '#0d9488', weight: 4, opacity: 0.9 }} />}
         <CampsLayer camps={scenario.camps} nodes={nodes} />
         <WarehousesLayer warehouses={scenario.warehouses} nodes={nodes} />
         <TrucksLayer />
-        {ring && <CircleMarker center={ring} radius={18} interactive={false} pathOptions={{ color: '#60a5fa', weight: 2, fillOpacity: 0.05 }} />}
+        {ring && <CircleMarker center={ring} radius={18} interactive={false} pathOptions={{ color: '#0f766e', weight: 2, fillOpacity: 0.06, dashArray: '4 3' }} />}
         <Fit pts={focus} />
       </MapContainer>
-      <div className="absolute bottom-2 left-2 z-[1000] flex flex-wrap gap-x-3 gap-y-1 rounded-md bg-slate-900/85 px-2 py-1 text-[11px] text-slate-200" data-testid="mini-legend">
-        <span className="flex items-center gap-1"><i className="inline-block h-0.5 w-4 bg-green-400" /> route</span>
-        <span className="flex items-center gap-1"><i className="inline-block h-0.5 w-4 border-t-2 border-dashed border-red-500" /> road closed</span>
-        <span className="flex items-center gap-1"><i className="inline-block size-2.5 rounded-sm border border-blue-400 bg-blue-500/40" /> flood</span>
-        <span className="flex items-center gap-1"><i className="inline-block size-2.5 rounded-full bg-red-500/60 ring-1 ring-red-500" /> camp</span>
-        <span className="flex items-center gap-1"><i className="inline-block size-2.5 rounded-sm bg-indigo-500" /> warehouse</span>
+      <div className="absolute bottom-2 left-2 z-[1000] flex flex-wrap gap-x-3 gap-y-1 rounded-md border border-slate-200 bg-white/95 px-2 py-1 text-[11px] text-slate-700" data-testid="mini-legend">
+        <span className="flex items-center gap-1"><i className="inline-block h-0.5 w-4 bg-teal-600" /> route</span>
+        <span className="flex items-center gap-1"><i className="inline-block h-0 w-4 border-t-2 border-dashed border-red-600" /> road closed</span>
+        <span className="flex items-center gap-1"><i className="inline-block size-2.5 rounded-sm border border-blue-600 bg-blue-500/25" /> flood</span>
+        <span className="flex items-center gap-1"><i className="inline-block size-2.5 rounded-full bg-red-600 ring-2 ring-white" /> camp</span>
+        <span className="flex items-center gap-1"><i className="wh-icon !size-2.5" /> warehouse</span>
       </div>
     </div>
   )

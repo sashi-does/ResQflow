@@ -98,6 +98,7 @@ async def health() -> dict:
         "ok": True,
         "llm_provider": s.effective_llm_provider,
         "llm_model": s.llm_model,
+        "llm_disabled": getattr(get_live().llm, "disabled_reason", None),
         "weather_mode": s.weather_mode,
         "demo_inject_fault": s.demo_inject_fault,
         "version": VERSION,

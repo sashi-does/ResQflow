@@ -15,11 +15,11 @@ function Bar({ label, value, initial, color }: { label: string; value: number; i
   const pct = Math.max(0, Math.min(100, (100 * value) / Math.max(1, initial)))
   return (
     <div className="mt-1 flex items-center gap-2">
-      <span className="w-12 text-[10px] text-slate-300">{label}</span>
-      <span className="h-1.5 w-24 rounded bg-slate-700">
+      <span className="w-12 text-[10px] text-slate-500">{label}</span>
+      <span className="h-1.5 w-24 rounded bg-slate-200">
         <span className="block h-1.5 rounded" style={{ width: `${pct}%`, background: color }} />
       </span>
-      <span className="text-[10px] tabular-nums text-slate-300">{fmtNum(value)}</span>
+      <span className="text-[10px] tabular-nums text-slate-600">{fmtNum(value)}</span>
     </div>
   )
 }

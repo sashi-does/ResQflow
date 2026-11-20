@@ -71,7 +71,7 @@ export function OfficerOverview() {
             ))}
             {pendingReports.map((r) => (
               <li key={r.id} className="flex items-center gap-3 py-2.5">
-                <MessageSquareText className="size-4 shrink-0 text-blue-600" aria-hidden />
+                <MessageSquareText className="size-4 shrink-0 text-brand-600" aria-hidden />
                 <div className="min-w-0 flex-1 text-sm">
                   <div className="font-medium text-slate-900">Field report from {names.camp(r.camp_id)}</div>
                   <div className="truncate text-xs text-slate-500">{r.changes.join(', ') || r.reasons.join(', ')}</div>
@@ -108,7 +108,7 @@ export function OfficerOverview() {
       </Section>
 
       <div className="lg:col-span-7">
-        <OpsMap className="h-[380px]" />
+        <OpsMap className="h-[380px]" compact />
         <div className="mt-2 flex justify-end">
           <Button variant="link" size="sm" onClick={() => navigate('/officer/operations')}>
             Open Live Operations <ArrowRight />

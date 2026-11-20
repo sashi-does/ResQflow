@@ -9,13 +9,14 @@ import { api, type DemoUser } from '../api'
 import { setSession, type Role } from '../auth'
 import { Logo } from '../components/app/Logo'
 import { HOME } from '../lib/nav'
+import { PHOTOS } from '../lib/photos'
 import { navigate } from '../router'
 
 const ROLE_CARD: Record<Role, { icon: LucideIcon; label: string; color: string }> = {
-  officer: { icon: ShieldCheck, label: 'District Officer', color: 'bg-blue-50 text-blue-700' },
-  camp: { icon: TentTree, label: 'Camp Coordinator', color: 'bg-emerald-50 text-emerald-700' },
-  driver: { icon: Truck, label: 'Truck Driver', color: 'bg-amber-50 text-amber-700' },
-  warehouse: { icon: Warehouse, label: 'Warehouse Manager', color: 'bg-violet-50 text-violet-700' },
+  officer: { icon: ShieldCheck, label: 'District Officer', color: 'bg-slate-100 text-slate-700' },
+  camp: { icon: TentTree, label: 'Camp Coordinator', color: 'bg-slate-100 text-slate-700' },
+  driver: { icon: Truck, label: 'Truck Driver', color: 'bg-slate-100 text-slate-700' },
+  warehouse: { icon: Warehouse, label: 'Warehouse Manager', color: 'bg-slate-100 text-slate-700' },
 }
 const ORDER: Role[] = ['officer', 'camp', 'driver', 'warehouse']
 const PRIMARY_CAMP = 'camp.majuli'
@@ -53,22 +54,21 @@ export function Login() {
 
   return (
     <div className="min-h-full bg-slate-50 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-      <aside className="relative hidden overflow-hidden bg-gradient-to-br from-blue-700 to-blue-900 p-12 text-white lg:flex lg:flex-col">
+      <aside className="relative isolate hidden overflow-hidden bg-ink p-12 text-white lg:flex lg:flex-col">
+        <img src={PHOTOS.aerial.src} alt="" className="absolute inset-0 -z-10 h-full w-full object-cover opacity-50" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-ink via-ink/70 to-ink/30" />
         <div className="flex items-center gap-3">
-          <Logo className="size-10" />
-          <span className="text-2xl font-bold tracking-tight">RahatNet</span>
+          <Logo className="size-9" inverted />
+          <span className="text-xl font-semibold tracking-tight">RahatNet</span>
         </div>
         <div className="mt-auto max-w-md">
-          <p className="text-3xl leading-tight font-semibold">When the roads go under, the supplies don’t stop.</p>
-          <p className="mt-4 text-blue-100">
-            AI agents re-plan flood-relief deliveries in Assam the moment a road floods. Every decision is explained, and people
-            approve the big ones.
+          <p className="text-3xl leading-tight font-semibold tracking-tight">When the roads go under, the supplies don’t stop.</p>
+          <p className="mt-4 text-white/75">
+            AI agents re-plan flood-relief deliveries in Assam the moment a road floods. Every decision is explained, and people approve the big ones.
           </p>
-          <ul className="mt-8 space-y-3 text-sm text-blue-50">
-            <li>• One live picture for the District Officer</li>
-            <li>• Camp reports in Assamese or English, understood by AI</li>
-            <li>• Drivers re-routed before they reach the water</li>
-          </ul>
+          <p className="mt-10 text-[11px] text-white/50">
+            {PHOTOS.aerial.caption}. Photo: {PHOTOS.aerial.author}, {PHOTOS.aerial.license}.
+          </p>
         </div>
       </aside>
 
@@ -117,10 +117,10 @@ export function Login() {
             {cards.map(({ role, main, others }) => {
               const rc = ROLE_CARD[role]
               return (
-                <Card key={role} className="gap-0 py-0 transition-shadow hover:shadow-md">
+                <Card key={role} className="gap-0 py-0 transition-colors hover:border-brand-600">
                   <CardContent className="p-0">
                     <button
-                      className="flex w-full items-start gap-3 rounded-xl p-4 text-left focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
+                      className="flex w-full items-start gap-3 rounded-xl p-4 text-left focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:outline-none"
                       onClick={() => login(main.username, 'demo1234')}
                       disabled={!!busy}
                       data-testid={`demo-${main.username}`}
@@ -144,7 +144,7 @@ export function Login() {
                     {others.map((o) => (
                       <button
                         key={o.username}
-                        className="w-full border-t px-4 py-2 text-left text-xs text-blue-700 hover:bg-slate-50"
+                        className="w-full border-t px-4 py-2 text-left text-xs text-brand-700 hover:bg-slate-50"
                         onClick={() => login(o.username, 'demo1234')}
                         disabled={!!busy}
                         data-testid={`demo-${o.username}`}
@@ -161,7 +161,7 @@ export function Login() {
           <p className="mt-1 text-xs">
             <a
               href="/"
-              className="text-blue-700 hover:underline"
+              className="text-brand-700 hover:underline"
               onClick={(e) => {
                 e.preventDefault()
                 navigate('/')

@@ -26,7 +26,7 @@ export function ReportUnderstanding({ r }: { r: FieldReport }) {
   return (
     <div className="space-y-1.5 text-sm" data-testid="ai-understood">
       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-        <Bot className="size-3.5 text-blue-600" aria-hidden />
+        <Bot className="size-3.5 text-brand-600" aria-hidden />
         <span>
           {r.source === 'recorded' ? 'Recorded AI reading (offline demo)' : r.model ? `Read by ${r.model}` : 'AI reading'} · {Math.round(p.confidence * 100)}% sure
         </span>
@@ -85,7 +85,7 @@ function ReportRow({ r }: { r: FieldReport }) {
           )}
           {open && (
             <div className="mt-auto flex gap-2 pt-1">
-              <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => api.decideReport(r.id, 'confirm').then(() => toast('Report confirmed and applied', 'ok'), fail)} data-testid="confirm-report">
+              <Button  onClick={() => api.decideReport(r.id, 'confirm').then(() => toast('Report confirmed and applied', 'ok'), fail)} data-testid="confirm-report">
                 Confirm & apply
               </Button>
               <Button variant="outline" onClick={() => api.decideReport(r.id, 'reject').then(() => toast('Report rejected', 'warn'), fail)}>

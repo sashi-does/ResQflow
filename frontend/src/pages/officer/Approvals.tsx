@@ -72,7 +72,7 @@ function ApprovalCard({ o }: { o: Order }) {
         <div className="flex items-center gap-1.5 text-sm" data-testid="approval-countdown">
           <Timer className="size-4 text-slate-500" aria-hidden />
           {autoIn != null ? (
-            <span className="text-blue-700">Auto-approves in {fmtDuration(autoIn)} under your policy unless you decide first.</span>
+            <span className="text-brand-700">Auto-approves in {fmtDuration(autoIn)} under your policy unless you decide first.</span>
           ) : (
             <span className="text-amber-700">Waiting for you: the policy never auto-approves this one.</span>
           )}
@@ -80,7 +80,7 @@ function ApprovalCard({ o }: { o: Order }) {
         <div className="flex flex-col gap-2 sm:flex-row">
           <Input placeholder="Note (optional), e.g. send by boat instead" value={note} onChange={(e) => setNote(e.target.value)} aria-label="Decision note" />
           <div className="flex gap-2">
-            <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700" disabled={busy} onClick={() => decide('approve')} data-testid="approve">
+            <Button className="flex-1" disabled={busy} onClick={() => decide('approve')} data-testid="approve">
               Approve
             </Button>
             <Button variant="outline" className="flex-1 text-red-700" disabled={busy} onClick={() => decide('reject')} data-testid="reject">

@@ -19,11 +19,11 @@ export function RoadsLayer({ edges }: { edges: Edge[] }) {
             className={isBlocked ? 'road-blocked' : undefined}
             pathOptions={
               isBlocked
-                ? { color: '#ef4444', weight: WEIGHT[e.kind] + 1.5, opacity: 1, dashArray: '8 7' }
+                ? { color: '#dc2626', weight: WEIGHT[e.kind] + 1, opacity: 1, dashArray: '7 6' }
                 : {
-                    color: e.kind === 'ferry' ? '#38bdf8' : '#64748b',
+                    color: e.kind === 'ferry' ? '#0284c7' : '#64748b',
                     weight: WEIGHT[e.kind],
-                    opacity: 0.85,
+                    opacity: e.kind === 'nh' ? 0.75 : 0.55,
                     dashArray: e.kind === 'ferry' ? '4 6' : undefined,
                   }
             }
@@ -44,7 +44,7 @@ export function RoadsLayer({ edges }: { edges: Edge[] }) {
             key={`sel-${id}`}
             positions={e.geometry}
             interactive={false}
-            pathOptions={{ color: '#facc15', weight: 9, opacity: 0.35 }}
+            pathOptions={{ color: '#f59e0b', weight: 9, opacity: 0.35 }}
           />
         ) : null
       })}

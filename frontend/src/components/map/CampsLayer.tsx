@@ -15,14 +15,14 @@ export function CampsLayer({ camps, nodes }: { camps: CampDef[]; nodes: Map<stri
         const v = live[c.id]
         const level = v?.cut_off ? 'cut_off' : (v?.status ?? 'ok')
         const color = CAMP_COLORS[level]
-        const radius = 6 + Math.sqrt(c.population) / 11
+        const radius = 5 + Math.sqrt(c.population) / 14
         return (
           <CircleMarker
             key={`${c.id}-${level}`}
             center={[n.lat, n.lon]}
             radius={radius}
             className={level === 'critical' ? 'camp-critical' : undefined}
-            pathOptions={{ color, fillColor: color, fillOpacity: 0.4, weight: 2.5 }}
+            pathOptions={{ color: '#ffffff', fillColor: color, fillOpacity: 0.9, weight: 2 }}
             eventHandlers={{ click: () => setPick({ kind: 'camp', id: c.id }) }}
           >
             <Tooltip direction="top" offset={[0, -radius]}>
@@ -44,7 +44,7 @@ export function CampsLayer({ camps, nodes }: { camps: CampDef[]; nodes: Map<stri
                     {v.unserved_reason && (
                       <>
                         <br />
-                        <span style={{ color: '#fca5a5' }}>{v.unserved_reason}</span>
+                        <span style={{ color: '#b91c1c' }}>{v.unserved_reason}</span>
                       </>
                     )}
                   </>
@@ -61,9 +61,9 @@ export function CampsLayer({ camps, nodes }: { camps: CampDef[]; nodes: Map<stri
           <CircleMarker
             key={`sel-${id}`}
             center={[n.lat, n.lon]}
-            radius={10 + Math.sqrt(c.population) / 11}
+            radius={9 + Math.sqrt(c.population) / 14}
             interactive={false}
-            pathOptions={{ color: '#facc15', weight: 2, fill: false, dashArray: '4 4' }}
+            pathOptions={{ color: '#0f766e', weight: 2, fill: false, dashArray: '4 3' }}
           />
         ) : null
       })}

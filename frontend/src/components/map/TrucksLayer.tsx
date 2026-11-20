@@ -17,15 +17,12 @@ interface Animated {
 
 function truckIcon(t: TruckView, selected: boolean): L.DivIcon {
   const c = TRUCK_COLORS[t.status]
-  const ring = selected ? 'box-shadow:0 0 0 3px #facc15;' : ''
+  const ring = selected ? 'box-shadow:0 0 0 2px #0f766e;' : ''
   return L.divIcon({
     className: '',
-    html: `<div class="truck-icon" style="border-color:${c};${ring}">
-      <svg width="14" height="14" viewBox="0 0 24 24"><path d="M2 6h12v10H2z" fill="${c}"/><path d="M14 9h4.5l3.5 4v3h-8z" fill="${c}"/>
-      <circle cx="6.5" cy="17.5" r="2.2" fill="#0f172a" stroke="${c}" stroke-width="1.5"/><circle cx="17.5" cy="17.5" r="2.2" fill="#0f172a" stroke="${c}" stroke-width="1.5"/></svg>
-      <span>${t.id}</span></div>`,
-    iconSize: [44, 20],
-    iconAnchor: [22, 10],
+    html: `<div class="truck-icon" style="${ring}"><span class="dot" style="background:${c}"></span><span>${t.id}</span></div>`,
+    iconSize: [40, 20],
+    iconAnchor: [20, 10],
   })
 }
 

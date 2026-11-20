@@ -25,19 +25,19 @@ export const AGENT_LABEL: Record<AgentName, string> = {
 }
 
 export const CAMP_COLORS: Record<CampLevel | 'cut_off', string> = {
-  ok: '#22c55e',
+  ok: '#16a34a',
   low: '#f59e0b',
-  critical: '#ef4444',
-  cut_off: '#64748b',
+  critical: '#dc2626',
+  cut_off: '#475569',
 }
 
 export const TRUCK_COLORS: Record<TruckStatus, string> = {
   idle: '#94a3b8',
-  loading: '#fbbf24',
-  unloading: '#fbbf24',
-  en_route: '#34d399',
-  returning: '#38bdf8',
-  holding: '#ef4444',
+  loading: '#f59e0b',
+  unloading: '#f59e0b',
+  en_route: '#0d9488',
+  returning: '#64748b',
+  holding: '#dc2626',
 }
 
 export const TRUCK_STATUS_LABEL: Record<TruckStatus, string> = {

@@ -58,7 +58,7 @@ export function DriverReportRoad() {
                 key={r.edge_id}
                 onClick={() => setEdge(r.edge_id)}
                 aria-pressed={chosen === r.edge_id}
-                className={cn('flex w-full items-center gap-3 rounded-lg border p-3 text-left', chosen === r.edge_id ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'hover:bg-slate-50')}
+                className={cn('flex w-full items-center gap-3 rounded-lg border p-3 text-left', chosen === r.edge_id ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-500' : 'hover:bg-slate-50')}
                 data-testid="road-choice"
               >
                 <span className="font-semibold text-slate-900">{r.road.split(' (')[0]}</span>

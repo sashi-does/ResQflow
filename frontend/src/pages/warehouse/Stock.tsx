@@ -41,13 +41,13 @@ export function WarehouseStock() {
                   <span className="font-semibold text-slate-900">{it.label}</span>
                   <span className="text-slate-600 tnum">On hand {fmtNum(wh.stock[it.key])}</span>
                   <span className="text-amber-700 tnum">Committed {fmtNum(committed)}</span>
-                  <span className="text-blue-700 tnum">Available {fmtNum(wh.available[it.key])}</span>
+                  <span className="text-brand-700 tnum">Available {fmtNum(wh.available[it.key])}</span>
                   <span className="text-slate-500 tnum">Reserve {fmtNum(wh.reserve[it.key])}</span>
                 </div>
                 <div className="relative flex h-6 overflow-hidden rounded-md bg-slate-100" role="img" aria-label={`${it.label}: ${fmtNum(wh.available[it.key])} available, ${fmtNum(committed)} committed, ${fmtNum(wh.reserve[it.key])} in reserve`}>
                   <div className="bg-slate-400" style={{ width: pct(wh.reserve[it.key]) }} title="Safety reserve" />
                   <div className="bg-amber-400" style={{ width: pct(committed) }} title="Committed to orders awaiting approval" />
-                  <div className="bg-blue-500" style={{ width: pct(wh.available[it.key]) }} title="Available to plan" />
+                  <div className="bg-brand-500" style={{ width: pct(wh.available[it.key]) }} title="Available to plan" />
                   <div className="absolute inset-y-0 w-0.5 bg-red-600" style={{ left: pct(opening * 0.2) }} title="Safety reserve line (20%)" />
                 </div>
               </div>
@@ -56,7 +56,7 @@ export function WarehouseStock() {
           <div className="flex flex-wrap gap-4 text-xs text-slate-600">
             <span className="flex items-center gap-1.5"><i className="size-3 rounded-sm bg-slate-400" /> Safety reserve</span>
             <span className="flex items-center gap-1.5"><i className="size-3 rounded-sm bg-amber-400" /> Committed (awaiting approval)</span>
-            <span className="flex items-center gap-1.5"><i className="size-3 rounded-sm bg-blue-500" /> Available to plan</span>
+            <span className="flex items-center gap-1.5"><i className="size-3 rounded-sm bg-brand-500" /> Available to plan</span>
             <span className="flex items-center gap-1.5"><i className="h-3 w-0.5 bg-red-600" /> 20% reserve line</span>
           </div>
         </div>

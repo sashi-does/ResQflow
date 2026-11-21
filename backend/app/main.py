@@ -40,6 +40,10 @@ async def spa(path: str) -> FileResponse:
     root = STATIC_DIR.resolve()
     target = (root / path).resolve()
     if path and target.is_file() and root in target.parents:
+        if path == "sw.js":  # the service worker must always be re-checked, or an update never reaches phones
+            return FileResponse(target, media_type="text/javascript", headers={"Cache-Control": "no-cache"})
+        if path == "manifest.webmanifest":
+            return FileResponse(target, media_type="application/manifest+json")
         return FileResponse(target)
     index = root / "index.html"
     if not index.exists():

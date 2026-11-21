@@ -22,6 +22,7 @@ export const resolved = (p: ThemePref = pref): 'light' | 'dark' => (p === 'syste
 export function applyTheme(): void {
   document.documentElement.classList.toggle('dark', resolved() === 'dark')
   document.documentElement.dataset.theme = resolved()
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolved() === 'dark' ? '#070d1a' : '#0f766e') // phone status bar
   listeners.forEach((l) => l())
 }
 

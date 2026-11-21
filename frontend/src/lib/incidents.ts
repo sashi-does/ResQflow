@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { fmtNum, shortName } from './format'
 import { truckLabel } from './names'
 import { useStore } from '../store'
+import type { CampView, Scenario } from '../types'
 
 export type IncidentFilter = 'all' | 'roads' | 'camps' | 'trucks'
 
@@ -18,6 +19,19 @@ export interface Incident {
   meta?: string
   severity: number
   go: () => void
+}
+
+const ITEM_WORD: Record<string, string> = { food_rations: 'food', water_l: 'water', medical_kits: 'medical kits' } // same tie-break order as the Inventory agent
+
+/** "food 0.5 days" for the supply that runs out first (same minimum the Inventory agent uses). */
+function shortage(c: CampView, fallbackPop: number, scenario: Scenario | null): string {
+  const per = scenario?.constants?.per_capita_daily as Record<string, number> | undefined
+  const pop = c.population ?? fallbackPop
+  if (!per || !pop) return `water ${c.water_days.toFixed(1)} days`
+  const [item, days] = Object.keys(ITEM_WORD)
+    .map((i) => [i, (c.stock[i as keyof typeof c.stock] ?? 0) / (pop * (per[i] ?? 1))] as const)
+    .reduce((a, b) => (b[1] < a[1] ? b : a))
+  return `${ITEM_WORD[item]} runs out in ${days.toFixed(1)} days`
 }
 
 export function age(mins: number | null): string {
@@ -67,7 +81,7 @@ export function useIncidents(): Incident[] {
         type: 'camps',
         icon: c.cut_off ? MapPinOff : TentTree,
         title: `${shortName(def.name)} camp ${c.cut_off ? 'cut off' : 'critical'}`,
-        place: `${fmtNum(c.population ?? def.population)} people · water ${c.water_days.toFixed(1)} days`,
+        place: `${fmtNum(c.population ?? def.population)} people · ${shortage(c, def.population, scenario)}`,
         status: c.cut_off ? { tone: 'red', word: 'Cut off' } : { tone: 'red', word: 'Critical' },
         since: null,
         meta: c.cut_off ? 'needs a boat or air drop' : c.incoming && (c.incoming.water_l > 0 || c.incoming.food_rations > 0) ? 'supplies on the way' : 'no truck assigned yet',

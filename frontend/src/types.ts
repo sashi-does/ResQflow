@@ -63,6 +63,8 @@ export interface Scenario {
   camps: CampDef[]
   trucks: { id: string; home_warehouse: string }[]
   presets: Preset[]
+  constants?: { per_capita_daily?: Record<string, number> } & Record<string, unknown>
+  case?: { id: string; title: string }
 }
 
 // ---------------------------------------------------------------- live state (docs/05_API_CONTRACT.md)

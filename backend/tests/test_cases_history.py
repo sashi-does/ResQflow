@@ -132,3 +132,18 @@ def test_weather_lists_districts_with_rain(client):
     assert w["threshold_mm"] > 0 and w["districts"]
     assert all({"district", "rain_24h_mm", "heavy"} <= set(d) for d in w["districts"])
     assert w["districts"] == sorted(w["districts"], key=lambda d: -d["rain_24h_mm"])
+
+
+def test_inventory_names_the_supply_that_runs_out_first_and_the_surge_chain_reaches_a_truck():
+    cmp_ = build_comparison(scenario=load_scenario(case="northbank"), headless=True)
+    cmp_.run_until(12 * 3600)
+    log = cmp_.agentic.world.bus.entries
+    crit = next(e for e in log if e.kind == "camp.critical" and "Dhemaji" in e.summary and e.sim_time == "D1 10:30")
+    assert "runs out first" in crit.summary and "7,500 people" in crit.summary
+    assert "food" in crit.reasoning and "drinking water" in crit.reasoning and "medical kits" in crit.reasoning
+    # the same afternoon a truck is planned, checked and sent to Dhemaji with food on it
+    sent = [e for e in log if e.kind == "order.dispatched" and "Dhemaji" in e.summary and e.sim_time >= "D1 10:30"]
+    assert sent and "food rations" in sent[0].summary
+    assert {"inventory", "coordinator", "validator", "dispatcher"} <= {
+        e.agent for e in log if e.cycle == sent[0].cycle
+    } | {"inventory"}

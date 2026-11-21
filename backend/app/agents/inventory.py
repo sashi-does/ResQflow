@@ -14,6 +14,20 @@ LOW_DAYS = 1.0
 HYSTERESIS = 0.1  # log messages only: leave a level after recovering this far past it (stops log flapping)
 
 
+ITEM_WORD = {"water_l": "drinking water", "food_rations": "food", "medical_kits": "medical kits"}
+
+
+def limiting_item(world: WorldState, camp: Camp) -> tuple[str, float]:
+    """The supply that runs out first, and in how many days (the same minimum `days_of_cover` uses)."""
+    burn = world.burn_per_day(camp)
+    return min(((i, camp.stock.get(i) / burn[i]) for i in ITEMS if burn[i] > 0), key=lambda x: x[1])
+
+
+def cover_by_item(world: WorldState, camp: Camp) -> str:
+    burn = world.burn_per_day(camp)
+    return ", ".join(f"{ITEM_WORD[i]} {fmt_days(camp.stock.get(i) / burn[i])}" for i in ITEMS if burn[i] > 0)
+
+
 def camp_level(days_of_cover: float) -> CampLevel:
     """The single threshold function for camp status (backend status, UI colour, planner)."""
     return "critical" if days_of_cover < CRITICAL_DAYS else "low" if days_of_cover < LOW_DAYS else "ok"
@@ -106,22 +120,27 @@ class InventoryAgent:
             if prev == level:
                 continue
             self._last_level[camp.id] = level
+            item, item_days = limiting_item(world, camp)
+            short = f"{ITEM_WORD[item]} runs out first, in {fmt_days(item_days)}"
             if level == "critical":
                 newly_critical.append(camp.id)
                 world.bus.log(
                     "inventory",
                     "camp.critical",
-                    f"{camp.name} is critical: {fmt_days(st.days_of_cover)} of supplies left "
-                    f"for {camp.population:,} people.",
-                    f"Water {camp.stock.water_l:,} L ({fmt_days(st.water_days)}), food {camp.stock.food_rations:,} "
-                    f"rations, medical kits {camp.stock.medical_kits}. Incoming: {st.incoming.water_l:,} L water.",
+                    f"{camp.name} is critical: {short}, for {camp.population:,} people.",
+                    f"Days of cover by item: {cover_by_item(world, camp)}. Stock: water {camp.stock.water_l:,} L, "
+                    f"food {camp.stock.food_rations:,} rations, medical kits {camp.stock.medical_kits}. "
+                    f"Incoming: {st.incoming.water_l:,} L water, {st.incoming.food_rations:,} food rations. "
+                    "The Coordinator is asked to plan a delivery.",
                     camp_ids=[camp.id],
                 )
             elif level == "low" and prev is not None:
                 world.bus.log(
                     "inventory",
                     "camp.low",
-                    f"{camp.name} is running low: {fmt_days(st.days_of_cover)} of supplies left.",
+                    f"{camp.name} is running low: {short}.",
+                    f"Days of cover by item: {cover_by_item(world, camp)}. Below {fmt_days(LOW_DAYS)}, so the "
+                    "next planning cycle will include it.",
                     camp_ids=[camp.id],
                 )
             elif level == "ok" and prev in ("low", "critical"):

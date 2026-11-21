@@ -1,6 +1,6 @@
 {
-  "name": "RahatNet: flood relief coordination",
-  "short_name": "RahatNet",
+  "name": "ResQflow: flood relief coordination",
+  "short_name": "ResQflow",
   "description": "Live flood-relief logistics for Assam: re-routed trucks, camp reports and approvals.",
   "start_url": "/login",
   "scope": "/",

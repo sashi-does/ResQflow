@@ -178,7 +178,7 @@ def template_narrative(f: dict[str, Any]) -> dict[str, Any]:
     p = f["placeholders"]
     cut = ", ".join(c["camp"] for c in f["cut_off"])
     summary = (
-        f"Over {p['hours']} hours of flooding, RahatNet's agents re-routed {p['reroutes']} truck "
+        f"Over {p['hours']} hours of flooding, ResQflow's agents re-routed {p['reroutes']} truck "
         f"journey{'' if p['reroutes'] == '1' else 's'} around closed roads and made {p['deliveries_agentic']} "
         f"deliver{'y' if p['deliveries_agentic'] == '1' else 'ies'} ({p['supplies_t_agentic']} t). "
         f"People spent {p['water_agentic']} people-hours without water, against {p['water_static']} "

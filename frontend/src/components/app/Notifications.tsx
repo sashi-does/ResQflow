@@ -11,7 +11,7 @@ import { useStore } from '../../store'
 const DOT: Record<Tone, string> = { red: 'bg-red-500', amber: 'bg-amber-500', green: 'bg-emerald-500', blue: 'bg-brand-500', slate: 'bg-slate-400' }
 
 function seenKey(s: Session) {
-  return `rahatnet.seen.${s.user.username}`
+  return `resqflow.seen.${s.user.username}`
 }
 
 function readSeen(s: Session): number {

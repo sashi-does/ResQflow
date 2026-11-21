@@ -32,7 +32,7 @@ for (const [name, path, login] of [
 // The Command Center in both themes (dark mode flips the colour scale, so check contrast there too).
 for (const theme of ['light', 'dark'] as const) {
   test(`a11y: command center (${theme}) has no serious or critical axe violations`, async ({ page }) => {
-    await page.addInitScript((t) => localStorage.setItem('rahatnet.theme', t), theme)
+    await page.addInitScript((t) => localStorage.setItem('resqflow.theme', t), theme)
     await page.goto('/login')
     await page.getByTestId('demo-officer').click()
     await expect(page.getByTestId('page-title')).toBeVisible()

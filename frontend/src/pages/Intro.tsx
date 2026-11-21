@@ -51,7 +51,7 @@ function Figure({ p, className = '' }: { p: Photo; className?: string }) {
 
 export function Intro() {
   useEffect(() => {
-    document.title = 'RahatNet · Flood relief coordination for Assam'
+    document.title = 'ResQflow · Flood relief coordination for Assam'
   }, [])
   const signIn = () => navigate('/login')
   return (
@@ -62,7 +62,7 @@ export function Intro() {
         <div className="absolute inset-0 -z-10 bg-gradient-to-r from-ink via-ink/85 to-ink/20" />
         <header className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-5 sm:px-8">
           <Logo className="size-8" inverted />
-          <span className="text-lg font-semibold tracking-tight">RahatNet</span>
+          <span className="text-lg font-semibold tracking-tight">ResQflow</span>
           <nav className="ml-8 hidden gap-6 text-sm text-white/80 md:flex">
             <a href="#problem" className="hover:text-white">The problem</a>
             <a href="#how" className="hover:text-white">How it works</a>
@@ -76,7 +76,7 @@ export function Intro() {
           <p className="text-sm font-medium tracking-wide text-brand-300 uppercase">Flood relief coordination · Assam</p>
           <h1 className="mt-4 max-w-2xl text-4xl leading-[1.1] font-semibold tracking-tight sm:text-6xl">When the roads go under, the supplies don’t stop.</h1>
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-white/80">
-            RahatNet re-plans relief deliveries the moment a flood closes a road. Every decision is explained in plain English, and a
+            ResQflow re-plans relief deliveries the moment a flood closes a road. Every decision is explained in plain English, and a
             district officer approves the big ones.
           </p>
           <div className="mt-10 flex flex-wrap gap-3">
@@ -182,7 +182,7 @@ export function Intro() {
       <footer className="border-t bg-slate-50">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-8 text-sm text-slate-500 sm:px-8">
           <Logo className="size-6" />
-          <span>RahatNet · hackathon demo. The flood day is simulated; users are fictional. Locations are real.</span>
+          <span>ResQflow · hackathon demo. The flood day is simulated; users are fictional. Locations are real.</span>
           <span className="ml-auto text-xs">Map tiles © Esri, OpenStreetMap contributors. Photos from Wikimedia Commons, credited above.</span>
         </div>
       </footer>

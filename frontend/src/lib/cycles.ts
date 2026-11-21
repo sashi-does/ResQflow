@@ -75,7 +75,7 @@ export const agentColor = (a: AgentName) => (a === 'human' || a === 'system' ? '
 const PURPOSE: Record<LLMCall['purpose'], string> = {
   coordinator: 'Coordinator: allocation plan',
   field_intake: 'Field Intake: reading a camp report',
-  copilot: 'Ask RahatNet: copilot answer',
+  copilot: 'Ask ResQflow: copilot answer',
   report: 'After-action report: narrative',
   other: 'Other',
 }

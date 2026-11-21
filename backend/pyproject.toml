@@ -1,7 +1,7 @@
 [project]
-name = "rahatnet"
+name = "resqflow"
 version = "0.1.0"
-description = "RahatNet: flood-relief logistics agent swarm (Assam)"
+description = "ResQflow: flood-relief logistics agent swarm (Assam)"
 requires-python = ">=3.11,<3.13"
 dependencies = [
     "fastapi>=0.115",

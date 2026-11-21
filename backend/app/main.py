@@ -20,14 +20,14 @@ from app.sim.live import get_live
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     seed()  # demo users (bcrypt hashes) into SQLite
     live = get_live()
-    if os.environ.get("RAHATNET_NO_LOOP") != "1":
+    if os.environ.get("RESQFLOW_NO_LOOP") != "1":
         live.start_background()
     yield
     await live.stop_background()
     live.store.flush(timeout=5)  # finish queued history writes
 
 
-app = FastAPI(title="RahatNet", version=VERSION, lifespan=lifespan)
+app = FastAPI(title="ResQflow", version=VERSION, lifespan=lifespan)
 app.include_router(router)
 app.include_router(ws_router)
 

@@ -1,4 +1,4 @@
-/** RahatNet mark: a river line under a route arrow, in the brand teal. */
+/** ResQflow mark: a river line under a route arrow, in the brand teal. */
 export function Logo({ className = 'size-8', inverted = false }: { className?: string; inverted?: boolean }) {
   const bg = inverted ? '#ffffff' : '#0f766e'
   const fg = inverted ? '#0f766e' : '#ffffff'

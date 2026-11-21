@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-COORDINATOR_SYSTEM = """You are the Coordinator agent in RahatNet, a flood-relief logistics system for Assam, India.
+COORDINATOR_SYSTEM = """You are the Coordinator agent in ResQflow, a flood-relief logistics system for Assam, India.
 Your job: allocate relief supplies from warehouses to relief camps using the idle trucks listed.
 
 Goals, in order:
@@ -66,7 +66,7 @@ PLAN_SCHEMA = {
     "additionalProperties": False,
 }
 
-FIELD_INTAKE_SYSTEM = """You are the Field Intake agent in RahatNet, a flood-relief system in Assam, India.
+FIELD_INTAKE_SYSTEM = """You are the Field Intake agent in ResQflow, a flood-relief system in Assam, India.
 A relief-camp coordinator sends a short free-text report, in English or Assamese. Turn it into structured data.
 
 Rules:

@@ -80,7 +80,7 @@ export default function App() {
 
   const page = findPage(path)
   useEffect(() => {
-    if (page) document.title = `${page.title} · RahatNet`
+    if (page) document.title = `${page.title} · ResQflow`
   }, [page])
 
   let body: React.ReactNode

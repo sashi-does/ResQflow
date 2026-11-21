@@ -103,9 +103,9 @@ export const PAGES: PageDef[] = [
   {
     role: 'officer',
     slug: 'ask',
-    label: 'Ask RahatNet',
+    label: 'Ask ResQflow',
     icon: Sparkles,
-    title: 'Ask RahatNet',
+    title: 'Ask ResQflow',
     purpose: 'Ask questions about the live situation in plain language. Read-only: it never changes anything.',
     why: {
       problem: 'Getting a quick answer (“which camp is most at risk tonight?”) means calling five people.',
@@ -119,10 +119,10 @@ export const PAGES: PageDef[] = [
     label: 'Reports',
     icon: FileBarChart,
     title: 'Reports',
-    purpose: 'Prove the response is working: RahatNet against a static plan on the same floods.',
+    purpose: 'Prove the response is working: ResQflow against a static plan on the same floods.',
     why: {
       problem: 'Nobody can tell whether the response worked, or what to fix next time.',
-      does: 'Compares RahatNet with a fixed 06:00 plan on the same floods, and writes an after-action report (numbers from code) you can save as PDF.',
+      does: 'Compares ResQflow with a fixed 06:00 plan on the same floods, and writes an after-action report (numbers from code) you can save as PDF.',
       who: 'The District Officer, the state disaster authority, reviewers.',
     },
   },

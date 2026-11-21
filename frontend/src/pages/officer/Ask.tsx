@@ -65,8 +65,8 @@ export function OfficerAsk() {
           <p className="mt-3 flex items-center gap-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
             <KeyRound className="size-4" aria-hidden />
             {health?.llm_disabled
-              ? `AI is offline: ${health.llm_disabled}. Everything else in RahatNet keeps working.`
-              : 'Offline mode: answering needs an API key. Everything else in RahatNet works without one.'}
+              ? `AI is offline: ${health.llm_disabled}. Everything else in ResQflow keeps working.`
+              : 'Offline mode: answering needs an API key. Everything else in ResQflow works without one.'}
           </p>
         )}
       </Section>

@@ -16,7 +16,7 @@ export interface Session {
   user: User
 }
 
-const KEY = 'rahatnet.session'
+const KEY = 'resqflow.session'
 const listeners = new Set<() => void>()
 let cached: Session | null | undefined
 let cachedRaw: string | null = null

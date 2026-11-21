@@ -93,7 +93,7 @@ export function SavedRuns() {
               <TableHead>Case</TableHead>
               <TableHead className="hidden md:table-cell">Planner</TableHead>
               <TableHead>Ran to</TableHead>
-              <TableHead className="text-right">Water (RahatNet vs static)</TableHead>
+              <TableHead className="text-right">Water (ResQflow vs static)</TableHead>
               <TableHead className="hidden text-right sm:table-cell">Cycles · AI</TableHead>
             </TableRow>
           </TableHeader>

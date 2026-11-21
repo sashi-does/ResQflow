@@ -11,7 +11,7 @@ import bcrypt
 
 from app.config import BACKEND_DIR
 
-DB_PATH = BACKEND_DIR / "rahatnet.db"
+DB_PATH = BACKEND_DIR / "resqflow.db"
 DEMO_PASSWORD = "demo1234"
 
 # Names are fictional (doc 11). `title` is how the person is attributed in the decision log.

@@ -1,10 +1,10 @@
-"""doc 10 D: Agents view stats and the read-only "Ask RahatNet" copilot (FakeLLM, no key)."""
+"""doc 10 D: Agents view stats and the read-only "Ask ResQflow" copilot (FakeLLM, no key)."""
 
 import hashlib
 import json
 import os
 
-os.environ["RAHATNET_NO_LOOP"] = "1"
+os.environ["RESQFLOW_NO_LOOP"] = "1"
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

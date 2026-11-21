@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
 
 export type ThemePref = 'light' | 'dark' | 'system'
-const KEY = 'rahatnet.theme'
+const KEY = 'resqflow.theme'
 const listeners = new Set<() => void>()
 
 function read(): ThemePref {

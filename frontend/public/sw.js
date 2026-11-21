@@ -1,11 +1,11 @@
-/* RahatNet service worker: the app shell works offline; live data never comes from a cache.
+/* ResQflow service worker: the app shell works offline; live data never comes from a cache.
    - /api and /ws are never touched (a stale road closure or stock level would be worse than none).
    - Hashed build files (/assets/*), icons, fonts and photos: cache-first.
    - Page navigations: network-first, falling back to the cached shell, so the app still opens with no signal
      and shows its own "connection lost, reconnecting" banner. */
 const VERSION = 'v1'
-const SHELL = `rahatnet-shell-${VERSION}`
-const STATIC = `rahatnet-static-${VERSION}`
+const SHELL = `resqflow-shell-${VERSION}`
+const STATIC = `resqflow-static-${VERSION}`
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(SHELL).then((c) => c.addAll(['/', '/manifest.webmanifest', '/favicon.svg'])).then(() => self.skipWaiting()))
@@ -15,7 +15,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('rahatnet-') && k !== SHELL && k !== STATIC).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => (k.startsWith('resqflow-') || k.startsWith('rahatnet-')) && k !== SHELL && k !== STATIC).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   )
 })

@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-os.environ["RAHATNET_NO_LOOP"] = "1"
+os.environ["RESQFLOW_NO_LOOP"] = "1"
 
 from fastapi.testclient import TestClient  # noqa: E402
 

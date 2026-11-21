@@ -106,7 +106,7 @@ test('walkthrough: 4 roles in 4 windows, every page, cross-role updates within 2
   await expect(camp.getByTestId('camp-banner')).toBeVisible()
   await noHorizontalScroll(camp)
   await shot(camp, '07-camp-my-camp')
-  // 11 AI Agents, 12 Ask RahatNet (mock mode: clear needs-key state)
+  // 11 AI Agents, 12 Ask ResQflow (mock mode: clear needs-key state)
   await go(o, '/officer/agents')
   await expect(o.getByTestId('agents-view')).toBeVisible()
   await expect(o.getByTestId('feed').locator('[data-kind="order.approved"]').first()).toContainText('Ritu Baruah')
@@ -138,7 +138,7 @@ test('walkthrough: 4 roles in 4 windows, every page, cross-role updates within 2
   await go(o, '/officer/ask')
   await o.getByTestId('copilot-example').first().click()
   await expect(o.getByTestId('copilot-answer').first()).toContainText(/API key|needs/i)
-  await shot(o, '12-officer-ask-rahatnet')
+  await shot(o, '12-officer-ask-resqflow')
 
   // 13-15 Warehouse
   await expect(wh.getByTestId('stock-chart')).toBeVisible()

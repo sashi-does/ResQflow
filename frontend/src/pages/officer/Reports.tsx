@@ -34,7 +34,7 @@ function AfterAction() {
   return (
     <article className="print-report space-y-6 text-sm text-slate-800" data-testid="report">
       <header>
-        <div className="text-xs font-semibold tracking-wider text-slate-500 uppercase">RahatNet · After-action report</div>
+        <div className="text-xs font-semibold tracking-wider text-slate-500 uppercase">ResQflow · After-action report</div>
         <h2 className="mt-1 text-xl font-semibold text-slate-900">{report.title}</h2>
         <div className="text-slate-500">Written at sim time {report.generated_at_sim}</div>
       </header>
@@ -54,7 +54,7 @@ function AfterAction() {
           <TableHeader>
             <TableRow>
               <TableHead>Measure</TableHead>
-              <TableHead className="text-right">RahatNet</TableHead>
+              <TableHead className="text-right">ResQflow</TableHead>
               <TableHead className="text-right">Static plan</TableHead>
               <TableHead className="text-right">Change</TableHead>
             </TableRow>
@@ -169,7 +169,7 @@ export function OfficerReports() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Measure</TableHead>
-                  <TableHead className="text-right">RahatNet</TableHead>
+                  <TableHead className="text-right">ResQflow</TableHead>
                   <TableHead className="text-right">Static plan</TableHead>
                   <TableHead className="text-right">Change</TableHead>
                 </TableRow>

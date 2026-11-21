@@ -1,8 +1,8 @@
-# RahatNet: flood-relief agent swarm for Assam
+# ResQflow: flood-relief agent swarm for Assam
 
 > **When the roads go under, the supplies don't stop.**
 
-RahatNet is a team of cooperating AI agents that keeps relief supplies moving during the Assam floods.
+ResQflow is a team of cooperating AI agents that keeps relief supplies moving during the Assam floods.
 When a flood closes a highway, the agents re-route trucks that are already on the road, re-plan who gets what, and
 explain every decision in plain English. A District Officer approves every large order before it goes out.
 
@@ -25,7 +25,7 @@ its own login (sessionStorage), so you can open four tabs side by side, one per 
 
 | Role | Demo login | Pages |
 |---|---|---|
-| District Officer | `officer` (Ritu Baruah) | Overview · Command Center · Approvals · Field Reports · AI Agents · Ask RahatNet · Reports · Simulation *(demo tools: the only page with sim controls)* |
+| District Officer | `officer` (Ritu Baruah) | Overview · Command Center · Approvals · Field Reports · AI Agents · Ask ResQflow · Reports · Simulation *(demo tools: the only page with sim controls)* |
 | Camp Coordinator | `camp.majuli` (Mousumi Gogoi), `camp.morigaon` (Anil Das) | My Camp · Send Report (Assamese/English, Field Intake AI) · Deliveries (confirm received) · Alerts (Assamese + English) |
 | Truck Driver | `driver.t3` (Bikash Kalita) | My Trip (+ full-screen re-route alert → Acknowledge) · Report Road · History |
 | Warehouse Manager | `wh.nagaon` (Pranjal Saikia) | Stock (vs 20% safety reserve) · Loading Queue (Mark loaded) · Receive Stock |
@@ -40,14 +40,14 @@ Put a key in `.env` (git-ignored):
 LLM_PROVIDER=anthropic          # or openrouter
 ANTHROPIC_API_KEY=...           # or OPENROUTER_API_KEY=... with LLM_MODEL=anthropic/claude-haiku-5.5
 ```
-If the key is rejected or the account has no credits, RahatNet logs it once and keeps running offline.
+If the key is rejected or the account has no credits, ResQflow logs it once and keeps running offline.
 
 ## Where the AI is, and how it is kept honest
 - **Coordinator** (Claude, `LLM_MODEL`, default `claude-haiku-5-5`) proposes the allocation plan; a deterministic **validator** checks every
   plan, rejections go back with the violations (max 2 retries), then a heuristic planner takes over. Large/critical orders go to a human.
 - **Field Intake** reads coordinators' free text (English/Assamese) into structured JSON, validated with Pydantic; big or uncertain changes
   wait for Command to confirm. Items the system doesn't stock (ORS, baby food) become notes, never numbers.
-- **Ask RahatNet** copilot answers from a *frozen copy* of the live state with read-only tools (`get_camp`, `get_route`, `simulate_closure`).
+- **Ask ResQflow** copilot answers from a *frozen copy* of the live state with read-only tools (`get_camp`, `get_route`, `simulate_closure`).
 - **After-action report**: numbers are filled in by code from the KPIs and the log; the AI only writes the prose (an audit rejects any
   figure it typed itself).
 - **No key?** Everything still runs: the heuristic planner plans, the two scripted demo field reports use *recorded* AI readings
@@ -56,7 +56,7 @@ If the key is rejected or the account has no credits, RahatNet logs it once and 
 ## How the "Static" baseline works (the comparison is honest)
 
 Every KPI is measured on two copies of the same world, stepped in lockstep with fixed 30-second steps:
-**Agentic** (RahatNet's agents) and **Static** (a conventional plan-once approach). Both get exactly the same:
+**Agentic** (ResQflow's agents) and **Static** (a conventional plan-once approach). Both get exactly the same:
 
 - scenario: 5 warehouses, 8 camps (32,600 people), 6 trucks × 8 t, same starting stock;
 - floods: NH-715 Kaziranga at 07:15, Majuli ferry at 11:00, Morigaon cut off at 15:30, NH-715 reopens at 20:00;
@@ -96,7 +96,7 @@ days of cover) instead of water only, so a camp's water can run out before its n
 confirmed, the officer keeps approving) gave: water 37,960 vs 72,048 (−47%), food 0 vs 25, truck-hours stuck 0 vs 26.9,
 supplies 110.7 t vs 93.0 t; on-time 75% vs 87% and average delivery time are worse.
 **Results depend on timing.** Approving the 06:00 orders late, or confirming the Majuli report in the morning (trucks rush to
-Majuli and Morigaon is cut off at 15:30 with too little water), can make RahatNet only slightly better than the static plan
+Majuli and Morigaon is cut off at 15:30 with too little water), can make ResQflow only slightly better than the static plan
 on water and worse on food. The comparison is computed by code from the run, never edited.
 
 ## Three demo cases
@@ -104,7 +104,7 @@ on water and worse on food. The comparison is computed by code from the run, nev
 Same map, warehouses, camps and trucks; a different flood day each time (**Simulation → Choose a case**, or
 `uv run python scripts/run_headless.py --case <id>`). Headless, offline planner, seed 42:
 
-| Case | What happens | People-hours without water (RahatNet vs static) | Truck-hours stuck |
+| Case | What happens | People-hours without water (ResQflow vs static) | Truck-hours stuck |
 |---|---|---:|---:|
 | `highway` · Highway flood | NH-715 floods under Truck T3; Majuli ferry stops; Morigaon cut off | 3,952 vs 22,582 (−82%) | 0 vs 26.9 |
 | `northbank` · North bank cut off | Subansiri and Jia Bharali floods split the north bank; 1,500 people reach Dhemaji | 0 vs 7,252 (−100%) | 7.0 vs 11.4 |

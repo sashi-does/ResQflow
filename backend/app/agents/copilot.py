@@ -1,4 +1,4 @@
-"""Ask RahatNet: a read-only copilot for District Command.
+"""Ask ResQflow: a read-only copilot for District Command.
 
 The LLM answers from a compact world summary + the last 50 log entries, and may call three read-only tools.
 Tools run on a *frozen snapshot* taken on the simulation thread (plain dicts + the immutable road graph), so the
@@ -16,7 +16,7 @@ from app.llm.client import LLMClient, LLMError, ToolSpec, display_name
 from app.llm.journal import purpose
 from app.sim.world import WorldState
 
-COPILOT_SYSTEM = """You are "Ask RahatNet", the copilot for the District Disaster Management Officer
+COPILOT_SYSTEM = """You are "Ask ResQflow", the copilot for the District Disaster Management Officer
 during the Assam floods.
 Answer the officer's question in 2-6 short sentences, in the language of the question (English or Assamese).
 Use ONLY the state JSON, the recent decision log and the tools. Cite specifics: camp names, days of water, people,
@@ -267,7 +267,7 @@ def overview(f: Frozen) -> dict[str, Any]:
 def ask(llm: LLMClient, f: Frozen, question: str) -> dict[str, Any]:
     """Runs off the event loop. Returns {answer, tools_used, model, latency_ms} or {needs_key: True}."""
     if not llm.available:
-        return {"needs_key": True, "answer": "Ask RahatNet needs an API key (set ANTHROPIC_API_KEY in .env)."}
+        return {"needs_key": True, "answer": "Ask ResQflow needs an API key (set ANTHROPIC_API_KEY in .env)."}
     tools = CopilotTools(f)
     user = (
         "STATE:\n"

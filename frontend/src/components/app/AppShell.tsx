@@ -25,7 +25,7 @@ import { Notifications } from './Notifications'
 import { SearchPalette } from './SearchPalette'
 import { ThemeToggle } from './ThemeToggle'
 
-const COLLAPSE_KEY = 'rahatnet.sidebar.collapsed'
+const COLLAPSE_KEY = 'resqflow.sidebar.collapsed'
 
 function readCollapsed(): boolean {
   try {
@@ -134,7 +134,7 @@ function SidebarBody({ session, collapsed, onNavigate }: { session: Session; col
     <div className="flex h-full flex-col">
       <div className={cn('flex h-14 shrink-0 items-center gap-2.5 border-b border-slate-100', collapsed ? 'justify-center' : 'px-4')}>
         <Logo className="size-7" />
-        {!collapsed && <span className="text-[15px] font-semibold tracking-tight text-slate-900">RahatNet</span>}
+        {!collapsed && <span className="text-[15px] font-semibold tracking-tight text-slate-900">ResQflow</span>}
       </div>
       {!collapsed && (
         <div className="px-4 pt-4 pb-2" data-testid="role-badge">
@@ -236,7 +236,7 @@ export function AppShell({ session, page, children }: { session: Session; page: 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="left" className="w-72 p-0">
           <SheetTitle className="sr-only">Menu</SheetTitle>
-          <SheetDescription className="sr-only">RahatNet pages for your role</SheetDescription>
+          <SheetDescription className="sr-only">ResQflow pages for your role</SheetDescription>
           <SidebarBody session={session} collapsed={false} onNavigate={() => setOpen(false)} />
         </SheetContent>
       </Sheet>

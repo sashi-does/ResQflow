@@ -29,7 +29,7 @@ export function Login() {
   const [demo, setDemo] = useState<DemoUser[]>([])
 
   useEffect(() => {
-    document.title = 'Sign in · RahatNet'
+    document.title = 'Sign in · ResQflow'
     api.demoUsers().then(setDemo).catch(() => setDemo([]))
   }, [])
 
@@ -59,7 +59,7 @@ export function Login() {
         <div className="absolute inset-0 -z-10 bg-gradient-to-t from-ink via-ink/70 to-ink/30" />
         <div className="flex items-center gap-3">
           <Logo className="size-9" inverted />
-          <span className="text-xl font-semibold tracking-tight">RahatNet</span>
+          <span className="text-xl font-semibold tracking-tight">ResQflow</span>
         </div>
         <div className="mt-auto max-w-md">
           <p className="text-3xl leading-tight font-semibold tracking-tight">When the roads go under, the supplies don’t stop.</p>
@@ -76,12 +76,12 @@ export function Login() {
         <div className="mb-8 flex items-center gap-3 lg:hidden">
           <Logo className="size-9" />
           <div>
-            <div className="text-xl font-bold tracking-tight">RahatNet</div>
+            <div className="text-xl font-bold tracking-tight">ResQflow</div>
             <div className="text-sm text-slate-500">When the roads go under, the supplies don’t stop.</div>
           </div>
         </div>
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Sign in</h1>
-        <p className="mt-1 text-sm text-slate-500">Use your RahatNet account, or pick a demo account below.</p>
+        <p className="mt-1 text-sm text-slate-500">Use your ResQflow account, or pick a demo account below.</p>
 
         <form
           className="mt-6 grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
@@ -167,7 +167,7 @@ export function Login() {
                 navigate('/')
               }}
             >
-              ← About RahatNet
+              ← About ResQflow
             </a>
           </p>
         </div>

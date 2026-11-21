@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-os.environ["RAHATNET_NO_LOOP"] = "1"  # tests drive time explicitly with /api/sim/advance
+os.environ["RESQFLOW_NO_LOOP"] = "1"  # tests drive time explicitly with /api/sim/advance
 
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -191,12 +191,12 @@ def test_spa_routes_serve_index_html(client, tmp_path, monkeypatch):
     import app.main as main
 
     (tmp_path / "assets").mkdir()
-    (tmp_path / "index.html").write_text("<html>rahatnet</html>")
+    (tmp_path / "index.html").write_text("<html>resqflow</html>")
     (tmp_path / "assets" / "app.js").write_text("console.log(1)")
     monkeypatch.setattr(main, "STATIC_DIR", tmp_path)
     for path in ("/", "/command", "/camp/C7", "/driver/T3"):
         r = client.get(path)
-        assert r.status_code == 200 and "rahatnet" in r.text
+        assert r.status_code == 200 and "resqflow" in r.text
     assert client.get("/assets/app.js").text == "console.log(1)"
     assert client.get("/../../etc/passwd").status_code in (200, 404)  # never escapes the static dir
     assert "root:" not in client.get("/../../etc/passwd").text

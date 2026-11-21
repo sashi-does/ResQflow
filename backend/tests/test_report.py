@@ -3,7 +3,7 @@
 import os
 import time
 
-os.environ["RAHATNET_NO_LOOP"] = "1"
+os.environ["RESQFLOW_NO_LOOP"] = "1"
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

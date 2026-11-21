@@ -33,3 +33,11 @@ frontend/playwright-report/
 # demo video build output (recorded video, narration, frames)
 frontend/demo-video/out/
 frontend/test-results/
+
+# Local working notes, specs and demo-video tooling (kept out of the repo)
+CLAUDE.md
+PROGRESS.md
+docs/
+prompts/
+frontend/demo-video/
+.DS_Store

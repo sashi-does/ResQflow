@@ -8,10 +8,6 @@ explain every decision in plain English. A District Officer approves every large
 
 IDEA//FORGE AI & Agents Hackathon · Track 2 · Problem 4: *Autonomous Emergency Response & Supply Chain Logistics Swarm*.
 
-> 🚧 Work in progress. This README is completed in Phase 9 (architecture, video, deploy link).
-
-![Officer Overview](docs/screenshots/walkthrough/02-officer-overview.png)
-
 ## Quick start (no API keys needed)
 
 ```bash
@@ -19,12 +15,11 @@ make setup      # uv sync (backend) + npm install (frontend)
 make dev        # backend :8000 + dashboard http://localhost:5173  (BACKEND_PORT=8010 if :8000 is taken)
 make headless   # the whole 24 h scenario without UI: decision log + Agentic vs Static KPIs, ~1 s
 make test       # backend tests
-make e2e        # browser tests (uses your installed Chrome); screenshots → docs/screenshots/walkthrough/
+make e2e        # browser tests (uses your installed Chrome)
 ```
 
 Open http://localhost:5173/login and click a **demo account** (all fictional; password `demo1234`). Each browser tab keeps
-its own login (sessionStorage), so you can open four tabs side by side, one per role. The presenter's script is
-[`docs/WALKTHROUGH.md`](docs/WALKTHROUGH.md).
+its own login (sessionStorage), so you can open four tabs side by side, one per role.
 
 ## Four roles, one live world (real login, role-based access)
 
@@ -97,7 +92,7 @@ Average delivery time is worse for Agentic on purpose: it accepts long, safe det
 never reaches. On-time is lower because trucks now carry a balanced load (water, food and medical topped up to the same
 days of cover) instead of water only, so a camp's water can run out before its next truck.
 
-**The walkthrough story** (docs/WALKTHROUGH.md: the officer approves the 06:00 orders at once, Majuli's Assamese report arrives at 16:00 and is
+**The walkthrough story** (the officer approves the 06:00 orders at once, Majuli's Assamese report arrives at 16:00 and is
 confirmed, the officer keeps approving) gave: water 37,960 vs 72,048 (−47%), food 0 vs 25, truck-hours stuck 0 vs 26.9,
 supplies 110.7 t vs 93.0 t; on-time 75% vs 87% and average delivery time are worse.
 **Results depend on timing.** Approving the 06:00 orders late, or confirming the Majuli report in the morning (trucks rush to
@@ -141,4 +136,3 @@ officer can **send an alert** to all camps, camps at risk, or chosen camps.
 - `DEMO_INJECT_FAULT=true` (off by default) corrupts exactly one coordinator plan per demo run, so the validator's
   rejection-and-retry is visible on camera. It is labelled "[demo]" in the feed. It can also be toggled on the officer's Simulation page.
 
-The original plan pack (PRD, architecture, agents, API contract) is in [`docs/`](docs/).

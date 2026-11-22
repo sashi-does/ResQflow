@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import time
+import uuid
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -17,6 +20,7 @@ from app.auth.users import User, authenticate, demo_cards
 from app.auth.visibility import Visibility
 from app.config import get_settings
 from app.geo.hazards import hazard_from_preset
+from app.llm.client import display_name
 from app.llm.journal import JOURNAL
 from app.models import ApprovalPolicy, Supplies
 from app.services.weather import HEAVY_RAIN_MM_24H, rain_24h
@@ -29,6 +33,7 @@ router = APIRouter(prefix="/api")
 
 # Role guards (doc 11 §1). Officers can read everything; field roles only their own scope.
 OFFICER = [Depends(require_role("officer"))]
+OFFICER_USER = Depends(require_role("officer"))
 AnyUser = Depends(current_user)
 CAMP = Depends(require_role("camp"))
 DRIVER = Depends(require_role("driver"))
@@ -538,7 +543,10 @@ async def warehouse_adjust(warehouse_id: str, body: AdjustBody, user: User = WAR
 
 
 class CopilotBody(BaseModel):
-    question: str
+    question: str = Field(min_length=1, max_length=500)
+    id: str | None = Field(
+        default=None, pattern=r"^[A-Za-z0-9_-]{6,40}$"
+    )  # chosen by the browser, so it can show it at once
 
 
 @router.get("/agents", dependencies=OFFICER)
@@ -546,13 +554,48 @@ async def agents() -> dict:
     return get_live().agents_view()
 
 
-@router.post("/copilot", dependencies=OFFICER)
-async def copilot(body: CopilotBody) -> dict:
-    """Read-only: state is frozen here (sim thread); the LLM and its tools run on that copy off the event loop."""
+@router.post("/copilot")
+async def copilot(body: CopilotBody, user: User = OFFICER_USER) -> dict:
+    """Ask ResQflow. The question is saved as pending at once, then answered on a frozen copy of the world (read-only,
+    off the event loop) and saved again. The request runs to the end even if the officer leaves the page, so the
+    answer is in the history when they come back (memory + Postgres)."""
     live = get_live()
+    llm = live.copilot_llm
+    msg = {
+        "id": body.id or uuid.uuid4().hex[:16],
+        "username": user.username,
+        "asked_by": f"{user.name} ({user.title})",
+        "question": body.question.strip(),
+        "status": "pending",
+        "answer": None,
+        "model": display_name(llm.model) if llm.available else None,
+        "provider": getattr(llm, "provider", None),
+        "tools_used": [],
+        "latency_ms": None,
+        "call_id": None,
+        "sim_time": live.world.sim_time,
+        "case_id": live.case_id,
+        "run_id": live.run_id,
+        "asked_at": datetime.now(UTC).isoformat(timespec="milliseconds"),
+        "answered_at": None,
+    }
+    existing = live.copilot_messages.get(msg["id"])
+    if existing and existing["status"] != "pending":
+        return existing  # a retried request: answer once
+    live.save_copilot(msg)
     frozen = freeze(live.world, live.cmp.kpis())
     t0 = time.perf_counter()
-    out = await asyncio.to_thread(ask, live.copilot_llm, frozen, body.question)
+    out = await asyncio.to_thread(ask, llm, frozen, body.question)
+    msg = msg | {
+        "status": "needs_key" if out.get("needs_key") else "failed" if out.get("error") else "answered",
+        "answer": out.get("answer", ""),
+        "model": out.get("model") or msg["model"],
+        "tools_used": out.get("tools_used", []),
+        "latency_ms": out.get("latency_ms"),
+        "call_id": out.get("call_id"),
+        "answered_at": datetime.now(UTC).isoformat(timespec="milliseconds"),
+    }
+    live.save_copilot(msg)
     if not out.get("needs_key"):
         live.world.bus.log(
             "human",
@@ -562,7 +605,23 @@ async def copilot(body: CopilotBody) -> dict:
             llm_call=out.get("call_id"),
         )
         live.world.bus.record_ms("copilot", (time.perf_counter() - t0) * 1000)
-    return out
+    return msg | {"needs_key": bool(out.get("needs_key"))}
+
+
+@router.get("/copilot/history")
+async def copilot_history(limit: int = Query(50, ge=1, le=200), user: User = OFFICER_USER) -> list[dict]:
+    """This officer's questions and answers, oldest first: the database (every instance, every restart) merged with
+    this server's memory (the newest state of a message wins)."""
+    live = get_live()
+    merged: dict[str, dict] = {}
+    if live.store.enabled:
+        with contextlib.suppress(Exception):  # database down: memory still answers
+            for m in await asyncio.to_thread(live.store.copilot_history, user.username, limit):
+                merged[m["id"]] = m
+    for m in live.copilot_messages.values():
+        if m["username"] == user.username and (m["id"] not in merged or merged[m["id"]]["status"] == "pending"):
+            merged[m["id"]] = m
+    return sorted(merged.values(), key=lambda m: m["asked_at"])[-limit:]
 
 
 @router.post("/report", dependencies=OFFICER)

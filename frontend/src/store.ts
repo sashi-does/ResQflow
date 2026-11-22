@@ -1,6 +1,6 @@
 import { toast as sonner } from 'sonner'
 import { create } from 'zustand'
-import type { CampAlert, Health } from './api'
+import type { CampAlert, CopilotMessage, Health } from './api'
 import type {
   AfterActionReport,
   AgentName,
@@ -70,6 +70,9 @@ interface State {
   planSeq: number // increments on every plan.started / plan.completed (Agents view pulses on it)
   fieldReports: Record<string, FieldReport>
   alerts: CampAlert[]
+  /** Ask ResQflow messages by id (history from the server + live updates). */
+  copilot: Record<string, CopilotMessage>
+  upsertCopilot: (ms: CopilotMessage[]) => void
   pick: { kind: 'camp' | 'truck' | 'warehouse'; id: string } | null
   setPick: (p: State['pick']) => void
   /** Ask the map to fly somewhere (search results, incidents); `seq` re-triggers the same place. */
@@ -132,6 +135,17 @@ export const useStore = create<State>((set, get) => ({
   setReport: (report, open = true) => set({ report, reportOpen: open && !!report }),
   fieldReports: {},
   alerts: [],
+  copilot: {},
+  upsertCopilot: (ms) =>
+    set((s) => {
+      const next = { ...s.copilot }
+      for (const m of ms) {
+        const have = next[m.id]
+        // never let an older "pending" copy overwrite an answer that already arrived
+        if (!have || have.status === 'pending' || m.status !== 'pending') next[m.id] = m
+      }
+      return { copilot: next }
+    }),
   pick: null,
   setPick: (pick) => set({ pick }),
   focus: null,
@@ -151,6 +165,7 @@ export const useStore = create<State>((set, get) => ({
       agents: {},
       fieldReports: {},
       alerts: [],
+      copilot: {},
       receipts: {},
       log: [],
       flashes: [],
@@ -348,6 +363,9 @@ export const useStore = create<State>((set, get) => ({
         set({ orders: { ...s.orders, [o.id]: o } })
         return
       }
+      case 'copilot.updated':
+        s.upsertCopilot([m.payload as CopilotMessage])
+        return
       case 'camp.alert': {
         const a = m.payload as CampAlert
         set({ alerts: [a, ...s.alerts.filter((x) => x.id !== a.id)] })

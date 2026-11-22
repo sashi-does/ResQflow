@@ -91,6 +91,25 @@ CREATE TABLE IF NOT EXISTS kpi_snapshots (
   baseline jsonb NOT NULL,
   PRIMARY KEY (run_id, sim_seconds)
 );
+CREATE TABLE IF NOT EXISTS copilot_messages (
+  id text PRIMARY KEY,
+  username text NOT NULL,
+  asked_by text,
+  question text NOT NULL,
+  status text NOT NULL,
+  answer text,
+  model text,
+  provider text,
+  tools_used jsonb,
+  latency_ms int,
+  call_id text,
+  sim_time text,
+  case_id text,
+  run_id text,
+  asked_at timestamptz NOT NULL,
+  answered_at timestamptz
+);
+CREATE INDEX IF NOT EXISTS copilot_messages_user ON copilot_messages (username, asked_at);
 CREATE OR REPLACE VIEW coordination_cycles AS
   SELECT run_id, cycle, min(sim_time) AS started, max(sim_time) AS finished, count(*) AS steps,
          array_agg(DISTINCT agent) AS agents,
@@ -335,6 +354,37 @@ class Store:
             (sim_time, _j(agentic), _j(baseline), _j(report), run_id),
         )
 
+    def copilot_message(self, m: dict[str, Any]) -> None:
+        """Ask ResQflow: one question and (once it exists) its answer; upserted as it goes pending → answered."""
+        if not self.enabled:
+            return
+        self._put(
+            "INSERT INTO copilot_messages (id, username, asked_by, question, status, answer, model, provider,"
+            " tools_used, latency_ms, call_id, sim_time, case_id, run_id, asked_at, answered_at)"
+            " VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (id) DO UPDATE SET"
+            " status = EXCLUDED.status, answer = EXCLUDED.answer, model = EXCLUDED.model, provider = EXCLUDED.provider,"
+            " tools_used = EXCLUDED.tools_used, latency_ms = EXCLUDED.latency_ms, call_id = EXCLUDED.call_id,"
+            " answered_at = EXCLUDED.answered_at",
+            (
+                m["id"],
+                m["username"],
+                m.get("asked_by"),
+                m["question"],
+                m["status"],
+                m.get("answer"),
+                m.get("model"),
+                m.get("provider"),
+                _j(m.get("tools_used")),
+                m.get("latency_ms"),
+                m.get("call_id"),
+                m.get("sim_time"),
+                m.get("case_id"),
+                m.get("run_id"),
+                m["asked_at"],
+                m.get("answered_at"),
+            ),
+        )
+
     # ------------------------------------------------------------------ reads (called off the event loop)
     def _rows(self, sql: str, params: tuple = ()) -> list[dict[str, Any]]:
         from psycopg.rows import dict_row
@@ -342,6 +392,20 @@ class Store:
         with self._connect() as conn, conn.cursor(row_factory=dict_row) as cur:
             cur.execute(sql, params)
             return [dict(r) for r in cur.fetchall()]
+
+    def copilot_history(self, username: str, limit: int = 50) -> list[dict[str, Any]]:
+        rows = self._rows(
+            "SELECT id, username, asked_by, question, status, answer, model, provider, tools_used, latency_ms, call_id,"
+            " sim_time, case_id, run_id, asked_at, answered_at FROM copilot_messages WHERE username = %s"
+            " ORDER BY asked_at DESC LIMIT %s",
+            (username, limit),
+        )
+        for r in rows:  # same shape as the in-memory records
+            for k in ("asked_at", "answered_at"):
+                if r[k] is not None:
+                    r[k] = r[k].isoformat(timespec="milliseconds")
+            r["tools_used"] = r["tools_used"] or []
+        return rows
 
     def runs(self, limit: int = 30) -> list[dict[str, Any]]:
         return self._rows(

@@ -94,6 +94,26 @@ export interface Trip {
   on_time: boolean
 }
 
+/** One Ask ResQflow question and its answer, saved on the server (memory + Postgres). */
+export interface CopilotMessage {
+  id: string
+  username: string
+  asked_by: string | null
+  question: string
+  status: 'pending' | 'answered' | 'failed' | 'needs_key'
+  answer: string | null
+  model: string | null
+  provider: string | null
+  tools_used: { name: string; input: Record<string, unknown> }[]
+  latency_ms: number | null
+  call_id: string | null
+  sim_time: string | null
+  case_id: string | null
+  asked_at: string
+  answered_at: string | null
+  needs_key?: boolean
+}
+
 export interface CopilotAnswer {
   answer: string
   tools_used?: { name: string; input: Record<string, unknown> }[]
@@ -110,7 +130,8 @@ export const api = {
   alerts: (campId: string) => req<CampAlert[]>('GET', `/camps/${campId}/alerts`),
   history: (truckId: string) => req<Trip[]>('GET', `/trucks/${truckId}/history`),
   markLoaded: (orderId: string) => req<Order>('POST', `/orders/${orderId}/loaded`),
-  copilot: (question: string) => req<CopilotAnswer>('POST', '/copilot', { question }),
+  copilot: (question: string, id?: string) => req<CopilotMessage>('POST', '/copilot', { question, id }),
+  copilotHistory: () => req<CopilotMessage[]>('GET', '/copilot/history'),
   latestReport: () => req<AfterActionReport | null>('GET', '/report'),
   health: () => req<Health>('GET', '/health'),
   scenario: () => req<Scenario>('GET', '/scenario'),

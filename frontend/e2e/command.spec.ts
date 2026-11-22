@@ -126,3 +126,26 @@ test('warehouse offline shows as an incident and on the warehouse page; weather 
   await ctx.close()
   await wctx.close()
 })
+
+// Ask ResQflow keeps its conversation: leave the page mid-question, come back, reload: it's all still there.
+test('Ask ResQflow history survives leaving the page and a reload', async ({ browser }) => {
+  test.setTimeout(120_000)
+  const errors: string[] = []
+  const { ctx, page: o } = await openAs(browser, 'officer', errors)
+  await o.goto('/officer/ask')
+  const question = `Which camp needs water first? (${Date.now()})`
+  await o.getByTestId('copilot-input').fill(question)
+  await o.getByTestId('copilot-ask').click()
+  await o.getByTestId('nav-overview').click() // leave straight away
+  await expect(o.getByTestId('page-title')).toHaveText('Overview')
+  await o.getByTestId('nav-ask').click()
+  const card = o.getByTestId('copilot-answer').filter({ hasText: question })
+  await expect(card).toBeVisible()
+  await expect(card).not.toHaveAttribute('data-status', 'pending', { timeout: 15_000 })
+  await expect(card).toContainText(/API key|needs/i) // offline in tests: a clear answer, never a lost question
+  await o.reload()
+  await expect(o.getByTestId('copilot-answer').filter({ hasText: question })).toBeVisible()
+  await expect(o.getByTestId('copilot-meta').first()).toContainText('asked by Ritu Baruah')
+  expect(errors).toEqual([])
+  await ctx.close()
+})

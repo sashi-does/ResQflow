@@ -47,6 +47,7 @@ class LiveSim:
         self.store = Store(settings.database_url)
         self.store.start()
         self.run_id: str | None = None
+        self.copilot_messages: dict[str, dict[str, Any]] = {}  # Ask ResQflow history; survives resets (not a world)
         JOURNAL.sink = lambda call: self.store.llm_call(self.run_id, call.as_dict())
         self.case_id = DEFAULT_CASE
         self._task: asyncio.Task | None = None
@@ -264,6 +265,15 @@ class LiveSim:
         alert = camp_alerts.make(len(self.alerts) + 1, o.camp_id, w.sim_time, kind, o.id, o.truck_id, text)
         self.alerts.append(alert)
         self.broadcast("camp.alert", alert)
+
+    def save_copilot(self, m: dict[str, Any]) -> dict[str, Any]:
+        """Keep, persist and push one Ask ResQflow message (pending → answered/failed)."""
+        self.copilot_messages[m["id"]] = m
+        if len(self.copilot_messages) > 500:  # memory cap; the database keeps everything
+            self.copilot_messages.pop(next(iter(self.copilot_messages)))
+        self.store.copilot_message(m)
+        self.broadcast("copilot.updated", m)
+        return m
 
     def broadcast_alert(self, message: str, camp_ids: list[str] | None) -> list[dict[str, Any]]:
         """Command's own message to camps ("Send alert"): shown on each camp's Alerts page as written."""

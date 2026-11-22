@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import logging
 import os
 import secrets
 import time
@@ -22,6 +24,7 @@ _bearer = HTTPBearer(auto_error=False)
 _BEARER = Depends(_bearer)
 
 
+log = logging.getLogger(__name__)
 SECRET_FILE = (
     Path("/tmp") if os.environ.get("VERCEL") else BACKEND_DIR
 ) / ".jwt_secret"  # set JWT_SECRET in production
@@ -31,8 +34,17 @@ SECRET_FILE = (
 def _secret() -> str:
     """JWT_SECRET from env; otherwise a random secret generated once and kept in backend/.jwt_secret (git-ignored),
     so restarts (and `--reload` in dev) don't log everyone out."""
-    if get_settings().jwt_secret:
-        return get_settings().jwt_secret
+    s = get_settings()
+    if s.jwt_secret:
+        return s.jwt_secret
+    if os.environ.get("VERCEL"):
+        # Serverless hosts run several instances, each with its own /tmp: a random per-instance secret would log people
+        # out whenever a request lands on another instance. Without JWT_SECRET, every instance derives the same secret
+        # from the server's own private settings (never sent to clients).
+        seed = "|".join(v for v in (s.database_url, s.openrouter_api_key, s.anthropic_api_key, s.nvidia_api_key) if v)
+        if seed:
+            log.warning("JWT_SECRET is not set: using a secret derived from the server settings. Set JWT_SECRET.")
+            return hashlib.sha256(f"resqflow-jwt-v1|{seed}".encode()).hexdigest()
     try:
         if SECRET_FILE.exists():
             return SECRET_FILE.read_text().strip()

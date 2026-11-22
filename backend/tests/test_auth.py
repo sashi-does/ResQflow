@@ -149,3 +149,19 @@ def test_inject_fault_toggle_is_officer_only(client):
     assert client.get("/api/health").json()["demo_inject_fault"] is True
     client.post("/api/sim/inject-fault", json={"enabled": False}, headers=H())
     assert client.get("/api/health").json()["demo_inject_fault"] is False
+
+
+def test_on_vercel_without_jwt_secret_every_instance_derives_the_same_secret(monkeypatch):
+    from app.auth import security
+    from app.config import Settings
+
+    monkeypatch.setenv("VERCEL", "1")
+    monkeypatch.setattr(security, "get_settings", lambda: Settings(jwt_secret="", database_url="postgres://x"))
+    security._secret.cache_clear()
+    a = security._secret()
+    security._secret.cache_clear()  # a second instance, with its own memory and /tmp
+    assert security._secret() == a and len(a) == 64
+    monkeypatch.setattr(security, "get_settings", lambda: Settings(jwt_secret="set-explicitly"))
+    security._secret.cache_clear()
+    assert security._secret() == "set-explicitly"  # JWT_SECRET always wins
+    security._secret.cache_clear()

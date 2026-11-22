@@ -1,4 +1,4 @@
-import { CloudRain, MapPinOff, Siren, TentTree, Truck, Waves } from 'lucide-react'
+import { CloudRain, MapPinOff, Siren, TentTree, Truck, Warehouse as WarehouseIcon, Waves } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useMemo } from 'react'
 import { fmtNum, shortName } from './format'
@@ -6,7 +6,7 @@ import { truckLabel } from './names'
 import { useStore } from '../store'
 import type { CampView, Scenario } from '../types'
 
-export type IncidentFilter = 'all' | 'roads' | 'camps' | 'trucks'
+export type IncidentFilter = 'all' | 'roads' | 'camps' | 'trucks' | 'supply'
 
 export interface Incident {
   key: string
@@ -45,6 +45,7 @@ export function useIncidents(): Incident[] {
   const hazards = useStore((s) => s.hazards)
   const camps = useStore((s) => s.camps)
   const trucks = useStore((s) => s.trucks)
+  const warehouses = useStore((s) => s.warehouses)
   const scenario = useStore((s) => s.scenario)
   const sim = useStore((s) => s.sim)
   return useMemo(() => {
@@ -92,6 +93,26 @@ export function useIncidents(): Incident[] {
         },
       })
     }
+    for (const def of scenario?.warehouses ?? []) {
+      const v = warehouses[def.id]
+      if (!v?.offline) continue
+      const n = nodes.get(def.node_id)
+      out.push({
+        key: `w${def.id}`,
+        type: 'supply',
+        icon: WarehouseIcon,
+        title: `${shortName(def.name)} warehouse offline`,
+        place: v.offline_reason ?? 'loading stopped',
+        status: { tone: 'red', word: 'Supply disruption' },
+        since: null,
+        meta: 'planning from the other warehouses',
+        severity: 5,
+        go: () => {
+          st().setPick({ kind: 'warehouse', id: def.id })
+          if (n) st().setFocus(n.lat, n.lon)
+        },
+      })
+    }
     for (const t of Object.values(trucks)) {
       if (t.status !== 'holding') continue
       out.push({
@@ -110,6 +131,6 @@ export function useIncidents(): Incident[] {
       })
     }
     return out.sort((a, b) => b.severity - a.severity || (a.since ?? 1e9) - (b.since ?? 1e9))
-  }, [hazards, camps, trucks, scenario, sim?.sim_seconds])
+  }, [hazards, camps, trucks, warehouses, scenario, sim?.sim_seconds])
 }
 

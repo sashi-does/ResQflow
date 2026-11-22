@@ -2,7 +2,7 @@ import type { AgentName, LLMCall, LogEntry } from '../types'
 import { AGENT_COLORS } from './format'
 
 /** Pipeline order: the real data flow in the backend (Sense → Assess → Plan → Check → Act → Decide). */
-export const FLOW: AgentName[] = ['field_intake', 'monitor', 'inventory', 'routing', 'coordinator', 'validator', 'dispatcher', 'human']
+export const FLOW: AgentName[] = ['field_intake', 'monitor', 'inventory', 'routing', 'coordinator', 'validator', 'dispatcher', 'supply', 'human']
 
 export interface Cycle {
   id: number

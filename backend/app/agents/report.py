@@ -29,6 +29,12 @@ KPI_ROWS = [
 TIMELINE_KINDS = {
     "hazard.added",
     "hazard.removed",
+    "weather.advisory",
+    "weather.eased",
+    "warehouse.offline",
+    "warehouse.online",
+    "supply.ordered",
+    "supply.arrived",
     "hazard.confirmed",
     "hazard.unverified",
     "truck.rerouted",

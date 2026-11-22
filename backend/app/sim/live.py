@@ -619,6 +619,18 @@ class LiveSim:
             "stock": w.stock.as_dict(),
             "available": self.world.available(w).as_dict(),
             "reserve": self.world.reserve_held(w).as_dict(),
+            "offline": w.offline,
+            "offline_reason": w.offline_reason,
+            "restocks": [
+                {
+                    "id": r.id,
+                    "supplier": r.supplier,
+                    "items": r.items.as_dict(),
+                    "ordered_at": self.world.fmt(r.ordered_at),
+                    "arrives_at": self.world.fmt(r.arrives_at),
+                }
+                for r in self.orch.supply.pending(wid)
+            ],
         }
 
     def route_roads(self, tid: str) -> list[dict[str, Any]]:

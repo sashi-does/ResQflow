@@ -116,6 +116,15 @@ def _validate(
                         idx,
                     )
                 )
+        if w.offline:
+            res.hard.append(
+                Violation(
+                    "WAREHOUSE_OFFLINE",
+                    f"{w.name} warehouse is offline ({w.offline_reason or 'loading stopped'}): "
+                    "nothing can be loaded there.",
+                    idx,
+                )
+            )
         # rule 4
         weight = world.weight(items)
         if weight > truck.capacity_kg + 1e-6:

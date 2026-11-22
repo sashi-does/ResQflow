@@ -113,11 +113,15 @@ class WorldState:
         return total
 
     def available(self, w: Warehouse, exclude: frozenset[str] | set[str] = frozenset()) -> Supplies:
-        """Stock above the safety reserve, minus stock committed to orders awaiting approval."""
+        """Stock above the safety reserve, minus stock committed to orders awaiting approval (none while offline)."""
+        if w.offline:
+            return Supplies()
         return (w.stock - self.reserve_level(w) - self.committed(w, exclude)).clamp0()
 
     def reserve_held(self, w: Warehouse, exclude: frozenset[str] | set[str] = frozenset()) -> Supplies:
         """The part of the safety reserve still physically in stock (usable only with approval)."""
+        if w.offline:
+            return Supplies()
         free = (w.stock - self.committed(w, exclude)).clamp0()
         return Supplies(**{i: min(free.get(i), self.reserve_level(w).get(i)) for i in ITEMS})
 

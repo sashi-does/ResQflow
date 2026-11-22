@@ -79,3 +79,36 @@ test('command center, dark theme, notifications, search and send alert', async (
   await ctx.close()
   await cctx.close()
 })
+
+// Supply disruption + Supply agent + continuous weather (Case 2): what the officer and the warehouse manager see.
+test('warehouse offline shows as an incident and on the warehouse page; weather and supply agents act', async ({ browser, request }) => {
+  test.setTimeout(180_000)
+  const errors: string[] = []
+  const api = await as(request, 'officer')
+  const { ctx, page: o } = await openAs(browser, 'officer', errors)
+  const { ctx: wctx, page: wh } = await openAs(browser, 'wh.nagaon', errors)
+  await api.post('/sim/reset', { demo_timeline: true, case: 'northbank' })
+  await api.post('/sim/advance', { minutes: 6 * 60 + 15 }) // 06:00 → 12:15: Nagaon goes offline at 12:10
+  await o.goto('/officer/operations')
+  await expect(o.getByTestId('incidents')).toContainText('Nagaon warehouse offline')
+  await o.getByTestId('incidents').getByText('Nagaon warehouse offline').click()
+  await expect(o.getByTestId('ops-details')).toContainText('Offline')
+  await o.waitForTimeout(600)
+  await shot(o, '26-command-center-warehouse-offline')
+  await wh.goto('/warehouse/stock')
+  await expect(wh.getByTestId('warehouse-offline')).toContainText('Kolong river')
+  await shot(wh, '27-warehouse-offline')
+  // the officer's log: hourly weather (advisory raised at 06:00), the outage and the recall
+  const log = await api.get<{ kind: string; summary: string }[]>('/log?limit=500')
+  expect(log.some((e) => e.kind === 'weather.advisory' && e.summary.includes('Dhemaji'))).toBe(true)
+  expect(log.some((e) => e.kind === 'order.recalled' && e.summary.includes('warehouse is offline'))).toBe(true)
+  // later the Supply agent re-orders for North Lakhimpur
+  await api.post('/sim/advance', { minutes: 150 })
+  await o.goto('/officer/agents')
+  await expect(o.getByTestId('agent-node-supply')).toBeVisible()
+  await expect(o.getByTestId('feed')).toContainText('Re-ordered for North Lakhimpur warehouse')
+  expect(errors).toEqual([])
+  await api.post('/sim/reset', { demo_timeline: true, case: 'highway' })
+  await ctx.close()
+  await wctx.close()
+})

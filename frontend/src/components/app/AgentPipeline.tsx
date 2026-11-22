@@ -11,7 +11,7 @@ const STAGES: { title: string; agents: AgentName[]; handoff?: string }[] = [
   { title: 'Assess', agents: ['inventory', 'routing'], handoff: 'camp needs · safe routes' },
   { title: 'Plan', agents: ['coordinator'], handoff: 'proposed plan' },
   { title: 'Check', agents: ['validator'], handoff: 'checked orders' },
-  { title: 'Act', agents: ['dispatcher'], handoff: 'approval requests' },
+  { title: 'Act', agents: ['dispatcher', 'supply'], handoff: 'approval requests' },
   { title: 'Decide', agents: ['human'] },
 ]
 

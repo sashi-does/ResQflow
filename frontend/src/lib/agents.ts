@@ -9,6 +9,7 @@ export const AGENTS: Record<AgentName, { name: string; does: string; ai?: boolea
   coordinator: { name: 'Coordinator', does: 'Plans who gets what', ai: true },
   validator: { name: 'Validator', does: 'Checks every plan' },
   dispatcher: { name: 'Dispatcher', does: 'Sends trucks; asks approval' },
+  supply: { name: 'Supply', does: 'Re-orders stock from suppliers' },
   human: { name: 'People', does: 'Approve, confirm, acknowledge' },
   system: { name: 'System', does: 'Scenario events' },
 }

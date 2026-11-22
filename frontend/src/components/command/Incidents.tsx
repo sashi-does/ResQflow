@@ -8,6 +8,7 @@ const FILTERS: { id: IncidentFilter; label: string }[] = [
   { id: 'roads', label: 'Roads' },
   { id: 'camps', label: 'Camps' },
   { id: 'trucks', label: 'Trucks' },
+  { id: 'supply', label: 'Supply' },
 ]
 
 export function Incidents({ filter, onFilter }: { filter: IncidentFilter; onFilter: (f: IncidentFilter) => void }) {

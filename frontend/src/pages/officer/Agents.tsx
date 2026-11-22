@@ -16,7 +16,7 @@ import { navigate } from '../../router'
 import { useStore } from '../../store'
 import type { AgentName, LLMCall, LogEntry } from '../../types'
 
-const FILTERS: AgentName[] = ['field_intake', 'monitor', 'inventory', 'routing', 'coordinator', 'validator', 'dispatcher', 'human']
+const FILTERS: AgentName[] = ['field_intake', 'monitor', 'inventory', 'routing', 'coordinator', 'validator', 'dispatcher', 'supply', 'human']
 const STEP_MS = 900
 
 function useLLMCalls(trigger: unknown): LLMCall[] {

@@ -79,6 +79,7 @@ export type AgentName =
   | 'coordinator'
   | 'validator'
   | 'dispatcher'
+  | 'supply'
   | 'human'
   | 'system'
 
@@ -186,6 +187,9 @@ export interface WarehouseView {
   stock: Supplies
   available: Supplies
   reserve: Supplies
+  offline?: boolean // supply disruption: nothing can be loaded here
+  offline_reason?: string | null
+  restocks?: { id: string; supplier: string; items: Supplies; ordered_at: string; arrives_at: string }[]
 }
 
 export interface Hazard {

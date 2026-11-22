@@ -178,6 +178,10 @@
   border-radius: 3px;
   box-shadow: 0 1px 4px rgb(15 23 42 / 0.4);
 }
+.wh-icon.wh-offline {
+  background: #dc2626;
+  box-shadow: 0 0 0 4px rgb(220 38 38 / 0.3);
+}
 .truck-icon {
   display: flex;
   align-items: center;

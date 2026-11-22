@@ -15,6 +15,7 @@ from app.agents.dispatcher import DispatcherAgent
 from app.agents.inventory import InventoryAgent
 from app.agents.monitor import MonitorAgent
 from app.agents.routing import RoutingAgent
+from app.agents.supply import SupplyAgent
 from app.agents.types import PlanResult
 from app.llm.client import LLMClient
 from app.models import ApprovalPolicy, Hazard
@@ -65,12 +66,23 @@ class Orchestrator:
         self.sitrep_every_s = 3 * 3600
         self.cycle_id: int | None = None
         self._last_sitrep = 0
+        self.supply = SupplyAgent()
+        self.weather_every_s = 3600  # the Monitor re-reads the forecast every sim-hour
+        self._last_weather: int | None = None
 
     # ------------------------------------------------------------ Policy
     def on_step(self, world: WorldState, events: list[TimelineEvent]) -> None:
         for ev in events:
             self.handle_event(world, ev)
         self.poll_plan(world)
+        if self._last_weather is None or world.sim_seconds - self._last_weather >= self.weather_every_s:
+            self._last_weather = world.sim_seconds
+            with timed(world, "monitor"):
+                if self.monitor.weather_check(world):
+                    self.request("weather forecast changed")
+        with timed(world, "supply"):
+            for trigger in self.supply.on_step(world):
+                self.request(trigger)
         for cid in self.inventory.track(world):
             self.request(f"{world.camps[cid].name} became critical")
         free = {t.id for t in world.trucks.values() if world.truck_is_free(t.id)}
@@ -129,6 +141,30 @@ class Orchestrator:
                 "More stock is available, so the Coordinator re-plans with it.",
             )
             self.request(f"new stock at {wh.name}")
+        elif ev.action == "warehouse_down":
+            wh = world.warehouses[ev.params["warehouse_id"]]
+            world.bus.log(
+                "monitor",
+                "warehouse.offline",
+                f"Supply disruption: {wh.name} warehouse is offline ({wh.offline_reason}). "
+                "Nothing can be loaded there until it reopens.",
+                f"Its {wh.stock.water_l:,} L water and {wh.stock.food_rations:,} food rations are out of reach. "
+                "Orders waiting on it are recalled and the Coordinator re-plans from the other warehouses.",
+            )
+            with timed(world, "dispatcher"):
+                self.dispatcher.recall_offline(world, wh.id)
+            world.bus.publish("warehouse.updated", {"warehouse_id": wh.id, "offline": True})
+            self.request(f"{wh.name} warehouse went offline")
+        elif ev.action == "warehouse_up":
+            wh = world.warehouses[ev.params["warehouse_id"]]
+            world.bus.log(
+                "monitor",
+                "warehouse.online",
+                f"{wh.name} warehouse is open again: loading has resumed.",
+                "Its stock is available to the planner again.",
+            )
+            world.bus.publish("warehouse.updated", {"warehouse_id": wh.id, "offline": False})
+            self.request(f"{wh.name} warehouse reopened")
         elif ev.action == "end" and not self.ended:
             self.ended = True
             k = world.kpi.snapshot()
@@ -146,6 +182,9 @@ class Orchestrator:
         if hazard:
             with timed(world, "routing"):
                 self.routing.on_hazard_added(world, hazard)
+            with timed(world, "inventory"):  # a camp cut off by this flood is flagged now, not at the next cycle
+                self.inventory.run(world)
+            self.dispatcher.recall_cut_off(world)
             self.request(f"new hazard: {hazard.label}")
             if self.inject_fault and not self.coordinator.injected:
                 self.coordinator.inject_next = True  # DEMO_INJECT_FAULT: corrupt the next plan once

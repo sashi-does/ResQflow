@@ -8,6 +8,7 @@ export const AGENT_COLORS: Record<AgentName, string> = {
   coordinator: '#10b981',
   validator: '#ef4444',
   dispatcher: '#6366f1',
+  supply: '#b45309',
   human: '#e5e7eb',
   system: '#94a3b8',
 }
@@ -20,6 +21,7 @@ export const AGENT_LABEL: Record<AgentName, string> = {
   coordinator: 'Coordinator',
   validator: 'Validator',
   dispatcher: 'Dispatcher',
+  supply: 'Supply',
   human: 'Human',
   system: 'System',
 }

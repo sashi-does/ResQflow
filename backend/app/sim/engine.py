@@ -107,7 +107,8 @@ def send_to_nearest_warehouse(world: WorldState, t: Truck) -> None:
         _become_idle(world, t, here.id)
         return
     best: tuple[float, str, Path] | None = None
-    for w in sorted(world.warehouses.values(), key=lambda w: w.id):
+    open_ = [w for w in world.warehouses.values() if not w.offline] or list(world.warehouses.values())
+    for w in sorted(open_, key=lambda w: w.id):
         p = world.find_path(node, w.node_id)
         if p and (best is None or p.minutes < best[0]):
             best = (p.minutes, w.id, p)
@@ -168,6 +169,11 @@ def _consume(world: WorldState, dt: int) -> None:
 def _update_truck(world: WorldState, t: Truck, dt: int, blocked: set[str]) -> None:
     t.stuck = False
     if t.status == "loading":
+        w = world.warehouses.get(t.at_warehouse or "")
+        if w is not None and w.offline:  # supply disruption: the truck waits at the closed yard
+            t.stuck = True
+            world.kpi.truck_hours_stuck += dt / 3600
+            return
         t.timer_s -= dt
         if t.timer_s <= 0:
             _finish_loading(world, t)

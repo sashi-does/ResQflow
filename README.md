@@ -80,24 +80,22 @@ average delivery time (order created → delivered), and supplies delivered.
 
 | KPI | Agentic | Static | Δ |
 |---|---:|---:|---:|
-| People-hours without water | 3,952 | 22,582 | **−82%** |
+| People-hours without water | 27 | 22,582 | **−100%** |
 | People-hours without food | 0 | 25 | −100% |
-| On-time deliveries | 87.5% | 93.3% | −6 pt *(worse)* |
-| Deliveries | 16 | 15 | +7% |
+| On-time deliveries | 100% | 93.3% | +7 pt |
+| Deliveries | 17 | 15 | +13% |
 | Truck-hours stuck | 0 | 26.9 | −100% |
-| Avg delivery time | 5h55m | 3h43m | +59% *(worse)* |
-| Supplies delivered | 104.7 t | 93.0 t | +13% |
+| Avg delivery time | 4h59m | 3h43m | +34% *(worse)* |
+| Supplies delivered | 107.8 t | 93.0 t | +16% |
 
-Average delivery time is worse for Agentic on purpose: it accepts long, safe detours and serves far camps the static plan
-never reaches. On-time is lower because trucks now carry a balanced load (water, food and medical topped up to the same
-days of cover) instead of water only, so a camp's water can run out before its next truck.
+Average delivery time is worse for ResQflow on purpose: it accepts long, safe detours and serves far camps the static plan
+never reaches. The hourly weather check matters here: the Dhemaji heavy-rain advisory at 06:00 lifts Dhemaji's priority
+from the first plan.
 
-**The walkthrough story** (the officer approves the 06:00 orders at once, Majuli's Assamese report arrives at 16:00 and is
-confirmed, the officer keeps approving) gave: water 37,960 vs 72,048 (−47%), food 0 vs 25, truck-hours stuck 0 vs 26.9,
-supplies 110.7 t vs 93.0 t; on-time 75% vs 87% and average delivery time are worse.
-**Results depend on timing.** Approving the 06:00 orders late, or confirming the Majuli report in the morning (trucks rush to
-Majuli and Morigaon is cut off at 15:30 with too little water), can make ResQflow only slightly better than the static plan
-on water and worse on food. The comparison is computed by code from the run, never edited.
+**The browser walkthrough** (the officer approves as orders arrive, Majuli's Assamese report at 16:00, confirmed) gave:
+water 2,010 vs 72,340 people-hours (−97%), food 0 vs 25, truck-hours stuck 0 vs 26.9, supplies 112.6 t vs 93.0 t;
+on-time 83% vs 87% and average delivery time are worse. **Results depend on timing** (when orders are approved, when
+reports arrive); the comparison is always computed by code from the run, never edited.
 
 ## Three demo cases
 
@@ -106,19 +104,23 @@ Same map, warehouses, camps and trucks; a different flood day each time (**Simul
 
 | Case | What happens | People-hours without water (ResQflow vs static) | Truck-hours stuck |
 |---|---|---:|---:|
-| `highway` · Highway flood | NH-715 floods under Truck T3; Majuli ferry stops; Morigaon cut off | 3,952 vs 22,582 (−82%) | 0 vs 26.9 |
-| `northbank` · North bank cut off | Subansiri and Jia Bharali floods split the north bank; 1,500 people reach Dhemaji | 0 vs 7,252 (−100%) | 7.0 vs 11.4 |
-| `surge` · Lower Assam surge | 4,000 more people at Barpeta and Goalpara; Barpeta's road floods; a consignment arrives | 22,425 vs 37,227 (−40%) | 0 vs 14.3 |
+| `highway` · Highway flood | NH-715 floods under Truck T3; Majuli ferry stops; Morigaon cut off | 27 vs 22,582 (−100%) | 0 vs 26.9 |
+| `northbank` · North bank cut off | Subansiri and Jia Bharali floods split the north bank; 1,500 people reach Dhemaji; Nagaon warehouse offline 12:10–17:00 | 0 vs 7,252 (−100%) | 7.0 vs 11.4 |
+| `surge` · Lower Assam surge | 4,000 more people at Barpeta and Goalpara; Barpeta's road floods; a consignment arrives | 15,343 vs 37,227 (−59%) | 0 vs 14.3 |
 
 Honest gaps: in `northbank` one truck is stranded ~7 h when the Majuli ferry stops and no safe road is left; in `surge`
-food is not better (Barpeta is cut off for 5 hours in both runs).
+Barpeta is cut off for 5 hours in both runs (food: 15,834 vs 22,350 people-hours). Restocking from suppliers is an agent
+decision, so only ResQflow's run gets it; the static plan never re-orders.
 
-## Command Center and everyday tools
+## Weather, supplies and disruptions
 
-The officer's **Command Center** puts active incidents (worst first), the live map, rain and risk tiles, the trucks and
-**suggested actions** (approve, verify a road report, alert a cut-off camp, warn a district with heavy rain) in one frame,
-with full screen. Every role gets **notifications** (bell, unread count), **⌘K search**, and a **light/dark theme**; the
-officer can **send an alert** to all camps, camps at risk, or chosen camps.
+- **Weather, every hour:** the Monitor re-reads the 24-hour rain forecast for every district each simulated hour (Open-Meteo
+  live, or a cached sample offline), raises a heavy-rain advisory when a district crosses 64.5 mm/24 h and lifts it when the
+  outlook falls back. Advisories raise the priority of the camps there.
+- **Regional suppliers:** the **Supply agent** watches each warehouse and, when free stock of any item falls below 35% of
+  opening stock, re-orders from that region's supplier (simulated) with a lead time of 4–6 hours. The arrival triggers a re-plan.
+- **Supply disruptions:** a warehouse can go offline (flooded yard). Nothing can be loaded there, orders waiting on it are
+  recalled, and the Coordinator plans from the other warehouses until it reopens; trucks that wait at a closed yard count as stuck.
 
 ## Seeing the agents coordinate, and keeping history
 

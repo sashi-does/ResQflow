@@ -92,6 +92,10 @@ function Details() {
         <Row k="Food rations" v={`${fmtNum(w.stock.food_rations)} (free ${fmtNum(w.available.food_rations)})`} />
         <Row k="Medical kits" v={`${fmtNum(w.stock.medical_kits)} (free ${fmtNum(w.available.medical_kits)})`} />
         <Row k="Safety reserve" v="20% of opening stock" />
+        {w.offline && <Row k="Status" v={<span className="text-red-700">Offline: {w.offline_reason}</span>} />}
+        {(w.restocks ?? []).map((r) => (
+          <Row key={r.id} k="Restock on the way" v={`${fmtItems(r.items)} · arrives ${r.arrives_at}`} />
+        ))}
       </dl>
     )
   }

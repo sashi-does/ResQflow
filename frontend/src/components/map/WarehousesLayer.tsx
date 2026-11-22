@@ -10,6 +10,12 @@ const icon = L.divIcon({
   iconSize: [16, 16],
   iconAnchor: [8, 8],
 })
+const offlineIcon = L.divIcon({
+  className: '',
+  html: '<div class="wh-icon wh-offline"></div>',
+  iconSize: [16, 16],
+  iconAnchor: [8, 8],
+})
 
 function Bar({ label, value, initial, color }: { label: string; value: number; initial: number; color: string }) {
   const pct = Math.max(0, Math.min(100, (100 * value) / Math.max(1, initial)))
@@ -34,7 +40,7 @@ export function WarehousesLayer({ warehouses, nodes }: { warehouses: WarehouseDe
         const v = live[w.id]
         const stock = v?.stock ?? w.stock
         return (
-          <Marker key={w.id} position={[n.lat, n.lon]} icon={icon} zIndexOffset={500} eventHandlers={{ click: () => useStore.getState().setPick({ kind: 'warehouse', id: w.id }) }}>
+          <Marker key={`${w.id}-${v?.offline ? 'off' : 'on'}`} position={[n.lat, n.lon]} icon={v?.offline ? offlineIcon : icon} zIndexOffset={500} eventHandlers={{ click: () => useStore.getState().setPick({ kind: 'warehouse', id: w.id }) }}>
             <Tooltip direction="top" offset={[0, -8]}>
               <div className="text-xs">
                 <b>
@@ -43,7 +49,9 @@ export function WarehousesLayer({ warehouses, nodes }: { warehouses: WarehouseDe
                 <Bar label="Water L" value={stock.water_l} initial={w.stock.water_l} color="#38bdf8" />
                 <Bar label="Food" value={stock.food_rations} initial={w.stock.food_rations} color="#fbbf24" />
                 <Bar label="Medical" value={stock.medical_kits} initial={w.stock.medical_kits} color="#f472b6" />
-                {v && v.available.water_l === 0 && (
+                {v?.offline && <div className="mt-1 text-[10px] font-semibold text-red-600">Offline: {v.offline_reason}</div>}
+                {(v?.restocks ?? []).length > 0 && <div className="mt-1 text-[10px] text-slate-600">Restock arriving {v!.restocks![0].arrives_at}</div>}
+                {v && !v.offline && v.available.water_l === 0 && (
                   <div className="mt-1 text-[10px] text-amber-300">Down to its safety reserve</div>
                 )}
               </div>

@@ -174,6 +174,48 @@ class DispatcherAgent:
             ):
                 self.approve(world, order.id, auto=True)
 
+    def recall_offline(self, world: WorldState, warehouse_id: str) -> list[str]:
+        """A warehouse just went offline: cancel what can't be loaded there, so those trucks load elsewhere."""
+        w = world.warehouses[warehouse_id]
+        out = []
+        for order in sorted(world.orders.values(), key=lambda o: o.id):
+            if order.warehouse_id != warehouse_id:
+                continue
+            t = world.trucks[order.truck_id]
+            if order.status == "awaiting_approval":
+                order.status = "failed"
+                t.order_id = None
+                what = f"Truck {t.id} is released"
+            elif (
+                order.status == "dispatched" and t.cargo.is_empty() and (t.status == "loading" or t.leg == "reposition")
+            ):
+                order.status = "failed"
+                t.order_id = None
+                w.stock = w.stock + order.items  # set aside at dispatch, never loaded
+                if t.status == "loading":
+                    t.timer_s = 0
+                    engine._become_idle(world, t, t.at_warehouse or warehouse_id)
+                else:
+                    engine.send_to_nearest_warehouse(world, t)
+                engine.emit_truck(world, t)
+                what = f"Truck {t.id} is free to load at another warehouse"
+            else:
+                continue
+            out.append(order.id)
+            world.bus.log(
+                "dispatcher",
+                "order.recalled",
+                f"Recalled order {order.id} ({w.name} → {world.camps[order.camp_id].name}): "
+                f"the warehouse is offline. {what}.",
+                "Nothing can be loaded at a closed warehouse, so waiting there only wastes a truck. "
+                "The Coordinator re-plans from the warehouses that are still open.",
+                order_ids=[order.id],
+                truck_ids=[t.id],
+                camp_ids=[order.camp_id],
+            )
+            world.bus.publish("order.updated", order.model_dump())
+        return out
+
     def recall_cut_off(self, world: WorldState) -> None:
         """Cancel orders to camps that just became unreachable, if their truck is stuck or not yet on the road."""
         for order in sorted(world.orders.values(), key=lambda o: o.id):

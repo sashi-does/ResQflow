@@ -15,12 +15,12 @@ from app.sim.world import WorldState
 @dataclass(frozen=True)
 class TimelineEvent:
     at_s: int
-    action: str  # hazard_add | hazard_remove | weather_check | population_change | stock_arrival | end
+    action: str  # hazard_add/remove | weather_check | population_change | stock_arrival | warehouse_down/up | end
     preset_id: str | None = None
     params: dict[str, Any] = field(default_factory=dict, hash=False, compare=False)
 
 
-GROUND_TRUTH = ("population_change", "stock_arrival")
+GROUND_TRUTH = ("population_change", "stock_arrival", "warehouse_down", "warehouse_up")
 
 
 def apply_ground_truth(world: WorldState, ev: TimelineEvent) -> None:
@@ -32,6 +32,12 @@ def apply_ground_truth(world: WorldState, ev: TimelineEvent) -> None:
     elif ev.action == "stock_arrival":
         wh = world.warehouses[p["warehouse_id"]]
         wh.stock = wh.stock + Supplies(**p["items"])
+    elif ev.action == "warehouse_down":
+        wh = world.warehouses[p["warehouse_id"]]
+        wh.offline, wh.offline_reason = True, p.get("note", "loading stopped")
+    elif ev.action == "warehouse_up":
+        wh = world.warehouses[p["warehouse_id"]]
+        wh.offline, wh.offline_reason = False, None
 
 
 def load_timeline(sc: ScenarioData) -> list[TimelineEvent]:

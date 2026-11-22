@@ -164,8 +164,10 @@ async def alerts_broadcast(body: BroadcastBody) -> dict:
 async def weather() -> dict:
     """Next-24 h rainfall per district (Open-Meteo, or the bundled cache offline) and the heavy-rain threshold."""
     s = get_settings()
-    sc = load_scenario()
-    mm = await asyncio.to_thread(rain_24h, sc.raw["district_centroids"], s.weather_mode)
+    live = get_live()
+    sc = live.world.scenario
+    offset_h = (sc.start_offset_s + live.world.sim_seconds) / 3600  # the same outlook the Monitor sees right now
+    mm = await asyncio.to_thread(rain_24h, sc.raw["district_centroids"], s.weather_mode, 3.0, offset_h)
     return {
         "source": "Open-Meteo live forecast"
         if s.weather_mode == "live"

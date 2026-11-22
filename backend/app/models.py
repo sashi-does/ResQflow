@@ -14,7 +14,16 @@ TruckStatus = Literal["idle", "loading", "en_route", "unloading", "returning", "
 OrderStatus = Literal["proposed", "awaiting_approval", "dispatched", "delivered", "rejected", "failed"]
 HazardKind = Literal["flood", "edge_closure", "rain_advisory", "driver_report"]
 AgentName = Literal[
-    "field_intake", "monitor", "inventory", "routing", "coordinator", "validator", "dispatcher", "human", "system"
+    "field_intake",
+    "monitor",
+    "inventory",
+    "routing",
+    "coordinator",
+    "validator",
+    "dispatcher",
+    "supply",
+    "human",
+    "system",
 ]
 
 
@@ -82,6 +91,8 @@ class Warehouse(BaseModel):
     stock: Supplies
     initial_stock: Supplies
     safety_ratio: float = 0.2
+    offline: bool = False  # supply disruption: nothing can be loaded here until it reopens
+    offline_reason: str | None = None
 
 
 class Camp(BaseModel):

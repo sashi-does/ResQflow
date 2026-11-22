@@ -345,6 +345,7 @@ def build_context(world: WorldState, statuses: dict[str, CampStatus], coord: Coo
             {
                 "id": w.id,
                 "name": w.name,
+                "offline": w.offline,  # supply disruption: nothing can be loaded there (available is zero)
                 "available": world.available(w).as_dict(),
                 "reserve": world.reserve_held(w).as_dict(),
             }

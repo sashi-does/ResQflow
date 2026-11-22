@@ -115,12 +115,23 @@ export function Suggestions({ weather, onAlert }: { weather: Weather | null; onA
   const camps = useStore((s) => s.camps)
   const trucks = useStore((s) => s.trucks)
   const reports = useStore((s) => s.fieldReports)
+  const log = useStore((s) => s.log)
   const scenario = useStore((s) => s.scenario)
   const toast = useStore((s) => s.toast)
   const [done, setDone] = useState<Set<string>>(new Set())
   const fail = (e: unknown) => toast(String(e), 'error')
   const list = useMemo(() => {
     const name = (id: string) => shortName(scenario?.camps.find((c) => c.id === id)?.name ?? id)
+    // An alert suggestion is done once an alert has gone to those camps since the problem began. Read from the
+    // decision log, so it stays done after a reload and for every officer, and a cancelled dialog leaves it open.
+    const latest = (kind: string) => {
+      const at = new Map<string, number>()
+      for (const e of log) if (e.kind === kind) for (const id of e.refs.camp_ids) at.set(id, Math.max(at.get(id) ?? -1, e.sim_seconds))
+      return at
+    }
+    const alertedAt = latest('alert.broadcast')
+    const cutAt = latest('camp.cut_off')
+    const alerted = (ids: string[], since: number) => ids.every((id) => (alertedAt.get(id) ?? -1) >= since)
     const out: Suggestion[] = []
     for (const o of Object.values(orders).filter((x) => x.status === 'awaiting_approval')) {
       out.push({
@@ -148,7 +159,7 @@ export function Suggestions({ weather, onAlert }: { weather: Weather | null; onA
         actions: [{ label: 'Confirm closure', primary: true, run: () => api.confirmHazard(h.id).then(() => toast('Road closed; trucks re-routed', 'warn'), fail) }],
       })
     }
-    for (const c of Object.values(camps).filter((x) => x.cut_off)) {
+    for (const c of Object.values(camps).filter((x) => x.cut_off && !alerted([x.id], cutAt.get(x.id) ?? 0))) {
       out.push({
         key: `cut${c.id}`,
         text: `${name(c.id)} is cut off: arrange a boat or air drop`,
@@ -163,7 +174,8 @@ export function Suggestions({ weather, onAlert }: { weather: Weather | null; onA
     }
     for (const d of weather?.districts.filter((x) => x.heavy) ?? []) {
       const ids = (scenario?.camps ?? []).filter((c) => c.district === d.district).map((c) => c.id)
-      if (!ids.length) continue
+      const since = hazards.find((h) => h.kind === 'rain_advisory' && h.district === d.district)?.created_at_sim ?? 0
+      if (!ids.length || alerted(ids, since)) continue
       out.push({
         key: `rain${d.district}`,
         text: `Heavy rain forecast for ${d.district} (${fmtNum(d.rain_24h_mm)} mm): warn the camp`,
@@ -174,7 +186,7 @@ export function Suggestions({ weather, onAlert }: { weather: Weather | null; onA
       })
     }
     return out
-  }, [orders, reports, hazards, camps, trucks, weather, scenario, toast, onAlert]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [orders, reports, hazards, camps, trucks, weather, scenario, log, toast, onAlert]) // eslint-disable-line react-hooks/exhaustive-deps
   const shown = list.filter((s) => !done.has(s.key))
   return (
     <section data-testid="suggestions">

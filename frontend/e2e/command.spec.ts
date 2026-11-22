@@ -20,6 +20,20 @@ test('command center, dark theme, notifications, search and send alert', async (
   await expect(o.getByTestId('fleet-truck')).toHaveCount(6)
   await expect(o.getByTestId('suggestion').first()).toBeVisible()
 
+  // an alert suggestion closes once its alert is actually sent (cancel keeps it), and stays closed after a reload
+  const rain = o.getByTestId('suggestion').filter({ hasText: 'Heavy rain forecast for Dhemaji' })
+  await expect(rain).toBeVisible()
+  await rain.getByRole('button', { name: 'Send alert' }).click()
+  await o.getByTestId('send-alert').getByRole('button', { name: 'Cancel' }).click()
+  await expect(rain).toBeVisible()
+  await rain.getByRole('button', { name: 'Send alert' }).click()
+  await expect(o.getByTestId('alert-message')).toHaveValue(/Heavy rain expected/)
+  await o.getByTestId('alert-send').click()
+  await expect(rain).toHaveCount(0)
+  await o.reload()
+  await expect(o.getByTestId('suggestions')).toBeVisible()
+  await expect(o.getByTestId('suggestion').filter({ hasText: 'Heavy rain forecast for Dhemaji' })).toHaveCount(0)
+
   // an incident focuses the map and opens its details
   await o.getByTestId('incidents').getByText(/camp critical/).first().click()
   await expect(o.getByTestId('ops-details')).toBeVisible()

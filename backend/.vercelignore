@@ -1,0 +1,10 @@
+.venv
+__pycache__
+.pytest_cache
+.ruff_cache
+tests
+*.db
+.jwt_secret
+.env
+.env.local
+.vercel

@@ -22,7 +22,7 @@ def visibility(live: LiveSim, user: User) -> Visibility:
 
 
 @router.websocket("/ws")
-async def ws_endpoint(ws: WebSocket, token: str = "") -> None:
+async def ws_endpoint(ws: WebSocket, token: str = "", resume: str = "") -> None:
     try:
         user = decode_token(token)
     except HTTPException:
@@ -30,7 +30,9 @@ async def ws_endpoint(ws: WebSocket, token: str = "") -> None:
         return
     await ws.accept()
     live = get_live()
-    live.fresh_session_reset()
+    live.ensure_background()  # serverless hosts may skip the startup hook: the clock starts with the first viewer
+    if not resume:  # a reconnect (e.g. a host closing long-lived sockets) continues the same run
+        live.fresh_session_reset()
     queue = live.subscribe()
     try:
         await ws.send_json({"type": "snapshot", "payload": visibility(live, user).snapshot(live.snapshot())})

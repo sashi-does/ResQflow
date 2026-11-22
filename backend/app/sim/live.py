@@ -106,6 +106,15 @@ class LiveSim:
     def start_background(self) -> None:
         self._task = asyncio.create_task(self.run())
 
+    def ensure_background(self) -> None:
+        """Start the clock loop if it isn't running (tests set RESQFLOW_NO_LOOP=1 to drive time themselves)."""
+        import os
+
+        if os.environ.get("RESQFLOW_NO_LOOP") == "1":
+            return
+        if self._task is None or self._task.done():
+            self.start_background()
+
     async def stop_background(self) -> None:
         if self._task:
             self._task.cancel()

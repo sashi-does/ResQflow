@@ -43,3 +43,6 @@ select = ["E", "F", "I", "B", "UP", "SIM"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["E501"]
+
+[tool.vercel]
+entrypoint = "app.main:app"  # Vercel serves the whole FastAPI app (API, WebSocket, built frontend) as one function

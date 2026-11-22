@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import os
 import secrets
 import time
 from collections.abc import Awaitable, Callable
 from functools import lru_cache
+from pathlib import Path
 
 import jwt
 from fastapi import Depends, HTTPException
@@ -20,7 +22,9 @@ _bearer = HTTPBearer(auto_error=False)
 _BEARER = Depends(_bearer)
 
 
-SECRET_FILE = BACKEND_DIR / ".jwt_secret"
+SECRET_FILE = (
+    Path("/tmp") if os.environ.get("VERCEL") else BACKEND_DIR
+) / ".jwt_secret"  # set JWT_SECRET in production
 
 
 @lru_cache

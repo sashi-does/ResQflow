@@ -13,12 +13,14 @@ export function useLiveSocket(): void {
     let retry = 0
     let timer: ReturnType<typeof setTimeout> | undefined
     let closed = false
+    let opened = false // a reconnect asks the server to resume, never to reset the world
     const { applyMessage, setConnected } = useStore.getState()
 
     const connect = () => {
       const proto = location.protocol === 'https:' ? 'wss' : 'ws'
-      ws = new WebSocket(`${proto}://${location.host}/ws?token=${encodeURIComponent(token)}`)
+      ws = new WebSocket(`${proto}://${location.host}/ws?token=${encodeURIComponent(token)}${opened ? '&resume=1' : ''}`)
       ws.onopen = () => {
+        opened = true
         retry = 0
         setConnected(true)
       }

@@ -224,6 +224,16 @@ export function AppShell({ session, page, children }: { session: Session; page: 
   }
   const everConnected = useStore((s) => s.everConnected)
   const connected = useStore((s) => s.connected)
+  // a quick reconnect (hosts close long-lived sockets every few minutes) shouldn't flash a warning
+  const [lost, setLost] = useState(false)
+  useEffect(() => {
+    if (connected || !everConnected) {
+      const t = setTimeout(() => setLost(false), 0)
+      return () => clearTimeout(t)
+    }
+    const t = setTimeout(() => setLost(true), 2000)
+    return () => clearTimeout(t)
+  }, [connected, everConnected])
   return (
     <div className="flex h-full bg-slate-50">
       <aside
@@ -264,7 +274,7 @@ export function AppShell({ session, page, children }: { session: Session; page: 
           <Notifications session={session} />
           <ThemeToggle />
         </div>
-        {everConnected && !connected && (
+        {lost && (
           <div className="border-b border-amber-200 bg-amber-50 px-6 py-2 text-sm text-amber-800" data-testid="connection-banner">
             Connection lost. Reconnecting to the live server…
           </div>

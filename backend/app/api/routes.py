@@ -111,6 +111,7 @@ async def health() -> dict:
         "llm_provider": s.effective_llm_provider,
         "llm_model": s.llm_model,
         "llm_disabled": getattr(get_live().llm, "disabled_reason", None),
+        "copilot_model": get_live().copilot_llm.model if get_live().copilot_llm.available else None,
         "db": get_live().store.status,
         "weather_mode": s.weather_mode,
         "demo_inject_fault": s.demo_inject_fault,
@@ -551,7 +552,7 @@ async def copilot(body: CopilotBody) -> dict:
     live = get_live()
     frozen = freeze(live.world, live.cmp.kpis())
     t0 = time.perf_counter()
-    out = await asyncio.to_thread(ask, live.llm, frozen, body.question)
+    out = await asyncio.to_thread(ask, live.copilot_llm, frozen, body.question)
     if not out.get("needs_key"):
         live.world.bus.log(
             "human",

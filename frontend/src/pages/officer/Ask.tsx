@@ -9,6 +9,8 @@ import { useStore } from '../../store'
 
 const EXAMPLES = ['Why isn’t Morigaon getting supplies?', 'What happens if NH-27 also floods?', 'Which camp is at most risk tonight?']
 
+const copilotName = (m?: string | null) => (m ?? '—').replace(/^nvidia\/nemotron-3\.5-lightning.*/, 'Nemotron 3.5 Lightning (NVIDIA)').replace(/^anthropic\//, '')
+
 export function OfficerAsk() {
   const health = useStore((s) => s.health)
   const setHealth = useStore((s) => s.setHealth)
@@ -19,7 +21,7 @@ export function OfficerAsk() {
   const [q, setQ] = useState('')
   const [busy, setBusy] = useState(false)
   const [answers, setAnswers] = useState<(CopilotAnswer & { q: string })[]>([])
-  const offline = health?.llm_provider === 'mock' || !!health?.llm_disabled
+  const offline = !health?.copilot_model // the copilot can have its own model (e.g. NVIDIA) even when planning is offline
   const ask = (question: string) => {
     if (!question.trim() || busy) return
     setBusy(true)
@@ -36,7 +38,7 @@ export function OfficerAsk() {
   return (
     <PageGrid>
       <StatGrid>
-        <StatCard label="AI model" value={<span className="text-lg">{health?.llm_disabled ? 'AI offline' : offline ? 'Needs API key' : (health?.llm_model ?? '—')}</span>} sub={offline ? 'running in offline mode' : 'answers from live data'} icon={offline ? KeyRound : Sparkles} tone={offline ? 'amber' : 'blue'} />
+        <StatCard label="AI model" value={<span className="text-lg">{offline ? (health?.llm_disabled ? 'AI offline' : 'Needs API key') : copilotName(health?.copilot_model)}</span>} sub={offline ? 'running in offline mode' : 'answers from live data'} icon={offline ? KeyRound : Sparkles} tone={offline ? 'amber' : 'blue'} />
         <StatCard label="Access" value="Read-only" sub="it can look things up, never change them" icon={Lock} tone="green" />
         <StatCard label="Questions asked" value={answers.length} sub="this session" icon={Search} tone="blue" />
         <StatCard label="Live lookups used" value={lookups} sub="every fact comes from a lookup" icon={Search} tone="blue" />

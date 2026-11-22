@@ -49,6 +49,7 @@ export interface Health {
   llm_provider: string
   llm_model: string
   llm_disabled?: string | null
+  copilot_model?: string | null // the model that answers Ask ResQflow (may differ from the planner's)
   db?: string
   weather_mode: string
   demo_inject_fault: boolean

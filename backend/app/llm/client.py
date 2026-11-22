@@ -30,6 +30,8 @@ DISPLAY = {
     "claude-haiku-5-5": "Claude Haiku 5.5",
     "claude-sonnet-5-5": "Claude Sonnet 5.5",
     "claude-opus-5-5": "Claude Opus 5.5",
+    "nvidia/nemotron-3.5-lightning-30b-a3b": "Nemotron 3.5 Lightning (NVIDIA)",
+    "nvidia/nemotron-3.5-super-vl-120b-a12b": "Nemotron 3.5 Super (NVIDIA)",
 }
 
 
@@ -323,3 +325,14 @@ def make_llm(settings: Settings) -> LLMClient:
             provider="openrouter",
         )
     return MockClient(settings.llm_model)
+
+
+def make_copilot_llm(settings: Settings, main: LLMClient) -> LLMClient:
+    """The copilot's client: NVIDIA when COPILOT_PROVIDER=nvidia and a key is set, otherwise the main client."""
+    if settings.copilot_provider == "nvidia" and settings.nvidia_api_key:
+        from app.llm.nvidia import NvidiaClient
+
+        return NvidiaClient(
+            settings.nvidia_api_key, settings.copilot_model, settings.llm_timeout_s, settings.nvidia_base_url
+        )
+    return main

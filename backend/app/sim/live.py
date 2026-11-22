@@ -17,7 +17,7 @@ from app.agents.types import CampLevel
 from app.auth.context import who
 from app.config import Settings
 from app.geo.hazards import hazard_from_preset
-from app.llm.client import display_name, make_llm
+from app.llm.client import display_name, make_copilot_llm, make_llm
 from app.llm.journal import JOURNAL
 from app.models import ApprovalPolicy, Camp, FieldReport, Hazard, Supplies
 from app.persist import Store
@@ -43,6 +43,7 @@ class LiveSim:
         self.demo_timeline = True
         self.policy = ApprovalPolicy()
         self.llm = make_llm(settings)
+        self.copilot_llm = make_copilot_llm(settings, self.llm)  # may be NVIDIA (COPILOT_PROVIDER)
         self.store = Store(settings.database_url)
         self.store.start()
         self.run_id: str | None = None

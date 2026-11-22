@@ -21,6 +21,7 @@ during the Assam floods.
 Answer the officer's question in 2-6 short sentences, in the language of the question (English or Assamese).
 Use ONLY the state JSON, the recent decision log and the tools. Cite specifics: camp names, days of water, people,
 road names, truck ids, times. Never invent numbers; if something isn't in the data, say so.
+Write plain English for an officer: names, not ids where a name exists; never quote JSON, field names or raw values.
 You are read-only: you can't change anything. If the officer should act, say what they could do in the dashboard."""
 
 _TOOLS_SCHEMA = {
@@ -100,6 +101,8 @@ def freeze(world: WorldState, kpis: dict[str, Any]) -> Frozen:
                 "node_id": w.node_id,
                 "stock": w.stock.as_dict(),
                 "available": world.available(w).as_dict(),
+                "offline": w.offline,
+                "offline_reason": w.offline_reason,
             }
             for w in world.warehouses.values()
         },
@@ -111,6 +114,18 @@ def freeze(world: WorldState, kpis: dict[str, Any]) -> Frozen:
                 "at_warehouse": t.at_warehouse,
                 "route_edges": list(t.path_edge_ids),
                 "eta_sim_seconds": t.eta_sim_seconds,
+                "eta": world.fmt(t.eta_sim_seconds) if t.eta_sim_seconds else None,
+                # what the truck is doing, in plain ids: from which warehouse, to which camp, carrying what
+                "job": (
+                    {
+                        "from_warehouse": world.orders[t.order_id].warehouse_id,
+                        "to_camp": world.orders[t.order_id].camp_id,
+                        "items": world.orders[t.order_id].items.as_dict(),
+                        "order_status": world.orders[t.order_id].status,
+                    }
+                    if t.order_id in world.orders
+                    else None
+                ),
             }
             for t in world.trucks.values()
         },
@@ -254,11 +269,25 @@ def overview(f: Frozen) -> dict[str, Any]:
     return {
         "sim_time": f.sim_time,
         "camps": [
-            {k: c[k] for k in ("id", "name", "population", "days_of_cover", "water_days", "cut_off", "unserved_reason")}
+            {
+                k: c[k]
+                for k in (
+                    "id",
+                    "name",
+                    "population",
+                    "days_of_cover",
+                    "water_days",
+                    "cut_off",
+                    "unserved_reason",
+                    "incoming",
+                )
+            }
             for c in f.camps.values()
         ],
-        "warehouses": [{"id": w["id"], "name": w["name"], "available": w["available"]} for w in f.warehouses.values()],
-        "trucks": [{k: t[k] for k in ("id", "status", "order_id")} for t in f.trucks.values()],
+        "warehouses": [
+            {k: w[k] for k in ("id", "name", "available", "offline", "offline_reason")} for w in f.warehouses.values()
+        ],
+        "trucks": [{k: t[k] for k in ("id", "status", "order_id", "job", "eta")} for t in f.trucks.values()],
         "hazards": f.hazards,
         "kpis_so_far": {"agentic": f.kpis.get("agentic"), "static_plan": f.kpis.get("baseline")},
     }
@@ -267,7 +296,11 @@ def overview(f: Frozen) -> dict[str, Any]:
 def ask(llm: LLMClient, f: Frozen, question: str) -> dict[str, Any]:
     """Runs off the event loop. Returns {answer, tools_used, model, latency_ms} or {needs_key: True}."""
     if not llm.available:
-        return {"needs_key": True, "answer": "Ask ResQflow needs an API key (set ANTHROPIC_API_KEY in .env)."}
+        return {
+            "needs_key": True,
+            "answer": "Ask ResQflow needs an API key "
+            "(set ANTHROPIC_API_KEY, or COPILOT_PROVIDER=nvidia with NVIDIA_API_KEY, in .env).",
+        }
     tools = CopilotTools(f)
     user = (
         "STATE:\n"

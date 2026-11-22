@@ -2,6 +2,7 @@ import os
 
 os.environ["LLM_PROVIDER"] = "mock"  # tests are deterministic: never call a real LLM even if .env sets one
 os.environ["DATABASE_URL"] = ""  # tests never write to the history database
+os.environ["COPILOT_PROVIDER"] = ""  # …and never call the NVIDIA copilot
 
 import pytest  # noqa: E402
 

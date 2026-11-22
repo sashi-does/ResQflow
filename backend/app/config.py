@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     openrouter_api_key: str = ""
     openrouter_base_url: str = "https://openrouter.ai/api"  # OpenRouter's Anthropic-compatible Messages API
+    # The "Ask ResQflow" copilot can use its own model: COPILOT_PROVIDER=nvidia → NVIDIA API Catalog (build.nvidia.com)
+    copilot_provider: Literal["", "nvidia"] = ""
+    copilot_model: str = "nvidia/nemotron-3.5-lightning-30b-a3b"
+    nvidia_api_key: str = ""
+    nvidia_base_url: str = "https://integrate.api.nvidia.com/v1"
     openai_api_key: str = ""
     gemini_api_key: str = ""
     llm_timeout_s: float = 20.0

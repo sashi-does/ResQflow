@@ -6,7 +6,54 @@ ResQflow is a team of cooperating AI agents that keeps relief supplies moving du
 When a flood closes a highway, the agents re-route trucks that are already on the road, re-plan who gets what, and
 explain every decision in plain English. A District Officer approves every large order before it goes out.
 
-IDEA//FORGE AI & Agents Hackathon · Track 2 · Problem 4: *Autonomous Emergency Response & Supply Chain Logistics Swarm*.
+IDEA//FORGE AI & Agents Hackathon · **Track 2: Climate, Resource Infrastructure & Global Supply Resilience** ·
+Problem 4: *Autonomous Emergency Response & Supply Chain Logistics Swarm*.
+
+**AI and agents**
+![Claude](https://img.shields.io/badge/Claude-Haiku_5.5-D97757?logo=anthropic&logoColor=white)
+![Anthropic SDK](https://img.shields.io/badge/Anthropic_SDK-Python-191919?logo=anthropic&logoColor=white)
+![OpenRouter](https://img.shields.io/badge/OpenRouter-LLM_gateway-6566F1)
+![NVIDIA Nemotron](https://img.shields.io/badge/NVIDIA-Nemotron_3.5-76B900?logo=nvidia&logoColor=white)
+![Multi-agent](https://img.shields.io/badge/Multi--agent-8_agents-0F766E)
+![Tool use](https://img.shields.io/badge/LLM-tool_use_%2B_JSON_schema-0F766E)
+
+**Backend**
+![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![Uvicorn](https://img.shields.io/badge/Uvicorn-ASGI-499848)
+![Pydantic](https://img.shields.io/badge/Pydantic-v2-E92063?logo=pydantic&logoColor=white)
+![WebSockets](https://img.shields.io/badge/WebSockets-live_updates-010101)
+![NetworkX](https://img.shields.io/badge/NetworkX-road_graph-2C5BB4)
+![Shapely](https://img.shields.io/badge/Shapely-flood_geometry-4B8BBE)
+![HTTPX](https://img.shields.io/badge/HTTPX-1E3A8A)
+![JWT](https://img.shields.io/badge/JWT-HS256-000000?logo=jsonwebtokens&logoColor=white)
+![bcrypt](https://img.shields.io/badge/bcrypt-passwords-334155)
+
+**Data**
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-history-4169E1?logo=postgresql&logoColor=white)
+![Prisma Postgres](https://img.shields.io/badge/Prisma_Postgres-hosted_DB-2D3748?logo=prisma&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-users-003B57?logo=sqlite&logoColor=white)
+![Open-Meteo](https://img.shields.io/badge/Open--Meteo-weather-FF8C00)
+
+**Frontend**
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-06B6D4?logo=tailwindcss&logoColor=white)
+![shadcn/ui](https://img.shields.io/badge/shadcn%2Fui-Radix-000000?logo=shadcnui&logoColor=white)
+![Leaflet](https://img.shields.io/badge/Leaflet-react--leaflet-199900?logo=leaflet&logoColor=white)
+![Zustand](https://img.shields.io/badge/Zustand-state-433E38)
+![lucide](https://img.shields.io/badge/lucide-icons-F56565)
+![PWA](https://img.shields.io/badge/PWA-installable-5A0FC8?logo=pwa&logoColor=white)
+
+**Tooling and deployment**
+![uv](https://img.shields.io/badge/uv-Python_packaging-DE5FE9?logo=uv&logoColor=white)
+![pytest](https://img.shields.io/badge/pytest-0A9EDC?logo=pytest&logoColor=white)
+![Ruff](https://img.shields.io/badge/Ruff-lint-D7FF64?logo=ruff&logoColor=black)
+![Playwright](https://img.shields.io/badge/Playwright-e2e-2EAD33?logo=playwright&logoColor=white)
+![axe-core](https://img.shields.io/badge/axe--core-accessibility-663399)
+![oxlint](https://img.shields.io/badge/oxlint-lint-F7DF1E)
+![Vercel](https://img.shields.io/badge/Vercel-deploy-000000?logo=vercel&logoColor=white)
 
 ## Quick start (no API keys needed)
 

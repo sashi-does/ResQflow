@@ -1,4 +1,4 @@
-import { Bot, CircleCheck, Clock, Loader2, Mic, Send } from 'lucide-react'
+import { Bot, CircleCheck, Clock, Loader2, Mic, Send, Square } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -8,6 +8,7 @@ import type { DemoReport, FieldReport } from '../../types'
 import { Empty, PageGrid, Section, StatCard } from '../../components/app/blocks'
 import { Pill } from '../../components/app/status'
 import { useStore } from '../../store'
+import { speechCtor, transcriptOf, type SpeechRec } from '../../lib/speech'
 import { ReportUnderstanding } from '../officer/FieldReports'
 import { useMyCamp } from './common'
 
@@ -18,19 +19,6 @@ const STATUS: Record<FieldReport['status'], { tone: 'amber' | 'green' | 'red' | 
   unparsed: { tone: 'amber', text: 'Sent to District Officer to read' },
   rejected: { tone: 'slate', text: 'Not accepted by the District Officer' },
   confirmed: { tone: 'green', text: 'Confirmed by the District Officer' },
-}
-
-interface SpeechRec {
-  lang: string
-  interimResults: boolean
-  onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null
-  onend: (() => void) | null
-  start: () => void
-}
-
-function speechCtor(): (new () => SpeechRec) | null {
-  const w = window as unknown as Record<string, unknown>
-  return ((w.SpeechRecognition ?? w.webkitSpeechRecognition) as (new () => SpeechRec) | undefined) ?? null
 }
 
 function ReportCard({ r, highlight, scrollTo }: { r: FieldReport; highlight?: boolean; scrollTo?: boolean }) {
@@ -71,6 +59,7 @@ export function CampSendReport() {
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const [listening, setListening] = useState(false)
+  const recRef = useRef<SpeechRec | null>(null) // at most one recording at a time
   const [sentId, setSentId] = useState<string | null>(null)
   const [examples, setExamples] = useState<DemoReport[]>([])
   useEffect(() => {
@@ -95,15 +84,29 @@ export function CampSendReport() {
       .finally(() => setSending(false))
   }
   const listen = (lang: string) => {
-    if (!Speech) return
+    if (!Speech || recRef.current) return
     const rec = new Speech()
     rec.lang = lang
-    rec.interimResults = false
-    rec.onresult = (e) => setText((prev) => `${prev} ${e.results[0][0].transcript}`.trim())
-    rec.onend = () => setListening(false)
+    rec.interimResults = true // live text while speaking
+    rec.continuous = false
+    const before = text.trim() // what was typed before this recording: kept, never repeated
+    rec.onresult = (e) => {
+      // rebuild this recording's text from all its results each time (never append), so repeats can't pile up
+      const heard = transcriptOf(e.results)
+      setText(before ? `${before} ${heard}` : heard)
+    }
+    const done = () => {
+      recRef.current = null
+      setListening(false)
+    }
+    rec.onend = done
+    rec.onerror = done
+    recRef.current = rec
     setListening(true)
     rec.start()
   }
+  const stopListening = () => recRef.current?.stop()
+  useEffect(() => () => recRef.current?.stop(), []) // leaving the page ends the recording
   const [latest, ...older] = mine
   return (
     <PageGrid>
@@ -130,16 +133,21 @@ export function CampSendReport() {
                 Example ({x.lang === 'as' ? 'অসমীয়া' : 'English'})
               </Button>
             ))}
-          {Speech && (
-            <>
-              <Button variant="outline" size="sm" disabled={listening} onClick={() => listen('as-IN')}>
-                <Mic /> অসমীয়া
+          {Speech &&
+            (listening ? (
+              <Button variant="outline" size="sm" onClick={stopListening} data-testid="mic-stop" className="border-red-300 text-red-700">
+                <Square className="fill-current" /> Stop (listening…)
               </Button>
-              <Button variant="outline" size="sm" disabled={listening} onClick={() => listen('en-IN')}>
-                <Mic /> English
-              </Button>
-            </>
-          )}
+            ) : (
+              <>
+                <Button variant="outline" size="sm" onClick={() => listen('as-IN')} data-testid="mic-as">
+                  <Mic /> অসমীয়া
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => listen('en-IN')} data-testid="mic-en">
+                  <Mic /> English
+                </Button>
+              </>
+            ))}
           <Button className="ml-auto w-full sm:w-auto" disabled={sending || !text.trim()} onClick={send} data-testid="send-report">
             {sending ? <Loader2 className="animate-spin" /> : <Send />} {sending ? 'AI is reading…' : 'Send report'}
           </Button>

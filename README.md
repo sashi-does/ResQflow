@@ -1,9 +1,10 @@
-# ResQflow: flood-relief agent swarm for Assam
+# ResQflow: an autonomous agent swarm for emergency relief logistics
 
 > **When the roads go under, the supplies don't stop.**
 
-ResQflow is a team of cooperating AI agents that keeps relief supplies moving during the Assam floods.
-When a flood closes a highway, the agents re-route trucks that are already on the road, re-plan who gets what, and
+ResQflow is a team of cooperating AI agents that keeps relief supplies moving during floods and supply disruptions.
+It monitors weather and vehicle locations, checks supplies from regional suppliers, and finds safe routes around
+affected areas. When a flood closes a highway, the agents re-route trucks that are already on the road, re-plan who gets what, and
 explain every decision in plain English. A District Officer approves every large order before it goes out.
 
 IDEA//FORGE AI & Agents Hackathon · **Track 2: Climate, Resource Infrastructure & Global Supply Resilience** ·
@@ -122,7 +123,7 @@ Same map, warehouses, camps and trucks; a different flood day each time (**Simul
 |---|---|---:|---:|
 | `highway` · Highway flood | NH-715 floods under Truck T3; Majuli ferry stops; Morigaon cut off | 27 vs 22,582 (−100%) | 0 vs 26.9 |
 | `northbank` · North bank cut off | Subansiri and Jia Bharali floods split the north bank; 1,500 people reach Dhemaji; Nagaon warehouse offline 12:10–17:00 | 0 vs 7,252 (−100%) | 7.0 vs 11.4 |
-| `surge` · Lower Assam surge | 4,000 more people at Barpeta and Goalpara; Barpeta's road floods; a consignment arrives | 15,343 vs 37,227 (−59%) | 0 vs 14.3 |
+| `surge` · Population surge | 4,000 more people at Barpeta and Goalpara; Barpeta's road floods; a consignment arrives | 15,343 vs 37,227 (−59%) | 0 vs 14.3 |
 
 Honest gaps: in `northbank` one truck is stranded ~7 h when the Majuli ferry stops and no safe road is left; in `surge`
 Barpeta is cut off for 5 hours in both runs (food: 15,834 vs 22,350 people-hours). Restocking from suppliers is an agent

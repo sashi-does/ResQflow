@@ -1,0 +1,16 @@
+# never upload secrets, local state or bulky local folders (GitHub builds don't have them either)
+.env
+.env.*
+.vercel
+**/.venv
+**/node_modules
+**/__pycache__
+**/*.db
+**/.jwt_secret
+backend/app/static
+docs
+prompts
+CLAUDE.md
+PROGRESS.md
+frontend/demo-video
+frontend/test-results

@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["bom1"],
+  "buildCommand": "cd frontend && npm ci && npm run build",
+  "functions": {
+    "index.py": {
+      "excludeFiles": "{frontend/**,docs/**,prompts/**,backend/tests/**,backend/.venv/**,**/node_modules/**,**/__pycache__/**}"
+    }
+  }
+}

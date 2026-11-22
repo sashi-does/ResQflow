@@ -41,3 +41,10 @@ docs/
 prompts/
 frontend/demo-video/
 .DS_Store
+
+# Vercel CLI link + pulled env (never commit)
+.vercel
+.env.local
+.env*
+/pyproject.toml
+/uv.lock
